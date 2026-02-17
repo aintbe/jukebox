@@ -44,7 +44,7 @@ next-env.d.ts
 # Gradle
 HELP.md
 .gradle
-!gradle/wrapper/gradle-wrapper.jar
+!backend/gradle/wrapper/gradle-wrapper.jar
 !backend/**/src/main/**/build/
 !backend/**/src/test/**/build/
 
