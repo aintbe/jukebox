@@ -1,0 +1,40 @@
+package com.jukebox.backend.auth.dto
+
+import com.jukebox.backend.user.entity.User
+import io.jsonwebtoken.Claims
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+
+class RequestUser private constructor(
+    val userId: Long,
+    val username: String,
+    val authorities: List<GrantedAuthority>,
+) {
+    companion object {
+        fun from(user: User): RequestUser =
+            RequestUser(
+                userId = user.savedId,
+                username = user.username,
+                // TODO: add actual roles
+                authorities = listOf(SimpleGrantedAuthority("USER_ROLE")),
+            )
+
+        fun from(claims: Claims): RequestUser {
+            val userId = claims["userId"]?.toString()?.toLong()
+            val username = claims["username"] as? String
+            val authString = claims["auth"] as? String
+
+            requireNotNull(userId) { "userId is missing in claims" }
+            requireNotNull(username) { "username is missing in claims" }
+            requireNotNull(authString) { "authorities are missing in claims" }
+
+            val authorities =
+                authString
+                    .split(",")
+                    .filter { it.isNotBlank() }
+                    .map { SimpleGrantedAuthority(it.trim()) }
+
+            return RequestUser(userId, username, authorities)
+        }
+    }
+}
