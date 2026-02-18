@@ -25,7 +25,7 @@ class OAuth2SuccessHandler(
         authentication: Authentication,
     ) {
         val user =
-            (authentication.principal as? OAuth2Principal)?.requestUser
+            (authentication.principal as? OAuth2Principal)?.authUser
         if (user == null) {
             return failureHandler.onAuthenticationFailure(
                 request,

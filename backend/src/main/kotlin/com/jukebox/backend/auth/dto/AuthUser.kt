@@ -5,21 +5,21 @@ import io.jsonwebtoken.Claims
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 
-class RequestUser private constructor(
+class AuthUser private constructor(
     val userId: Long,
     val username: String,
     val authorities: List<GrantedAuthority>,
 ) {
     companion object {
-        fun from(user: User): RequestUser =
-            RequestUser(
+        fun from(user: User): AuthUser =
+            AuthUser(
                 userId = user.savedId,
                 username = user.username,
                 // TODO: add actual roles
                 authorities = listOf(SimpleGrantedAuthority("USER_ROLE")),
             )
 
-        fun from(claims: Claims): RequestUser {
+        fun from(claims: Claims): AuthUser {
             val userId = claims["userId"]?.toString()?.toLong()
             val username = claims["username"] as? String
             val authString = claims["auth"] as? String
@@ -34,7 +34,7 @@ class RequestUser private constructor(
                     .filter { it.isNotBlank() }
                     .map { SimpleGrantedAuthority(it.trim()) }
 
-            return RequestUser(userId, username, authorities)
+            return AuthUser(userId, username, authorities)
         }
     }
 }

@@ -1,6 +1,6 @@
 package com.jukebox.backend.auth.jwt
 
-import com.jukebox.backend.auth.dto.RequestUser
+import com.jukebox.backend.auth.dto.AuthUser
 import com.jukebox.backend.common.cache.Cache
 import com.jukebox.backend.common.cache.put
 import com.jukebox.backend.config.properties.JwtProperties
@@ -23,7 +23,7 @@ class JwtProvider(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun generateAccessToken(user: RequestUser): String {
+    fun generateAccessToken(user: AuthUser): String {
         val now = Instant.now()
         return Jwts
             .builder()
@@ -43,7 +43,7 @@ class JwtProvider(
             .compact()
     }
 
-    fun generateRefreshToken(user: RequestUser): String {
+    fun generateRefreshToken(user: AuthUser): String {
         // We don't have to create JWT for refresh tokens as the server keeps their states
         val token = UUID.randomUUID().toString()
         cacheManager.put(Cache.REFRESH_TOKEN, "user:${user.userId}", token)
@@ -51,7 +51,7 @@ class JwtProvider(
         return token
     }
 
-    fun extractPrincipal(token: String): RequestUser? =
+    fun extractPrincipal(token: String): AuthUser? =
         runCatching {
             val claims =
                 Jwts
@@ -62,7 +62,7 @@ class JwtProvider(
                     .parseClaimsJws(token)
                     .body
 
-            return RequestUser.from(claims)
+            return AuthUser.from(claims)
         }.onFailure { e ->
             val message =
                 when (e) {

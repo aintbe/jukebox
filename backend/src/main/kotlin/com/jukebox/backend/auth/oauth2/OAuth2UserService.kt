@@ -1,8 +1,8 @@
 package com.jukebox.backend.auth.oauth2
 
 import OAuth2Id
+import com.jukebox.backend.auth.dto.AuthUser
 import com.jukebox.backend.auth.dto.OAuth2Principal
-import com.jukebox.backend.auth.dto.RequestUser
 import com.jukebox.backend.oauth2.entity.OAuth2
 import com.jukebox.backend.user.UserRepository
 import com.jukebox.backend.user.entity.User
@@ -40,9 +40,9 @@ class OAuth2UserService(
         val user =
             oAuth2Repository.findUserById(provider, providerId)
                 ?: signUp(provider, providerId)
-        val requestUser = RequestUser.from(user)
+        val authUser = AuthUser.from(user)
 
-        return OAuth2Principal(requestUser, oAuth2User)
+        return OAuth2Principal(authUser, oAuth2User)
     }
 
     @Transactional
