@@ -1,5 +1,6 @@
 package com.jukebox.backend.common.entity
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.Column
 import jakarta.persistence.EntityListeners
 import jakarta.persistence.GeneratedValue
@@ -18,10 +19,13 @@ import java.time.Instant
 abstract class BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private val id: Long? = null
+    val id: Long? = null
 
+    // We should always use this instead of `id` to prevent using
+    // non-existent `id` before the entity is saved.
+    @get:JsonIgnore
     val savedId: Long
-        get() = checkNotNull(id) { "ID is not initialized in ${javaClass.simpleName}. Make sure the entity is saved." }
+        get() = checkNotNull(this.id) { "ID is not initialized in ${javaClass.simpleName}. Make sure the entity is saved." }
 
     @CreatedDate
     @Column(updatable = false, nullable = false)
