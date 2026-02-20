@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 class RedisOAuth2AuthorizedClientService(
     private val oAuth2RedisTemplate: RedisTemplate<String, OAuth2AuthorizedClient>,
 ) : OAuth2AuthorizedClientService {
-    private fun generateKey(principalName: String) = "oauth2_client:$principalName"
+    private fun generateKey(userId: String) = "oauth2_client:user:$userId"
 
     override fun <T : OAuth2AuthorizedClient?> loadAuthorizedClient(
         clientRegistrationId: String?,
