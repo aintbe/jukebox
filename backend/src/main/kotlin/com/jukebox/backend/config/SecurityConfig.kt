@@ -71,10 +71,16 @@ class SecurityConfig {
             // Spring security redirects user to login page when authentication fails.
             // Intercept the error and return error response right away.
             .exceptionHandling { handling ->
-                handling.authenticationEntryPoint { request, response, authException ->
+                handling.authenticationEntryPoint { request, response, error ->
                     response.apply {
                         status = HttpStatus.UNAUTHORIZED.value()
-                        writer.write(authException.message ?: "")
+                        writer.write(error.message ?: "")
+                    }
+                }
+                handling.accessDeniedHandler { request, response, error ->
+                    response.apply {
+                        status = HttpStatus.FORBIDDEN.value()
+                        writer.write(error.message ?: "")
                     }
                 }
             }

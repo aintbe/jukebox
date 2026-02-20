@@ -4,9 +4,10 @@ import com.jukebox.backend.common.exception.BusinessException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.bind.ServletRequestBindingException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -25,11 +26,17 @@ class GlobalExceptionHandler {
         return handleBusinessException(InternalException())
     }
 
-    @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun handleUnknownException(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> =
+    @ExceptionHandler(ServletRequestBindingException::class)
+    fun handleBindingException(e: ServletRequestBindingException): ResponseEntity<GlobalResponse<Nothing>> =
         ResponseEntity
-            .badRequest()
-            .body(GlobalResponse.error("CANNOT_PARSE_REQUEST_BODY", e.message ?: ""))
+            .status(HttpStatus.BAD_REQUEST)
+            .body(GlobalResponse.error("INVALID_SYNTAX", e.message ?: ""))
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNotFoundException(e: NoResourceFoundException): ResponseEntity<ErrorResponse> =
+        ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(GlobalResponse.error("NOT_FOUND", e.message ?: ""))
 }
 
 private class InternalException :
