@@ -1,10 +1,12 @@
-package com.jukebox.api.common.exception
+package com.jukebox.core.exception
 
 import org.springframework.http.HttpStatusCode
 import org.springframework.web.server.ResponseStatusException
 
 open class BusinessException(
-    status: HttpStatusCode,
+    statusCode: HttpStatusCode,
     val errorCode: String,
     reason: String,
-) : ResponseStatusException(status, reason)
+) : ResponseStatusException(statusCode, reason) {
+    override fun getReason(): String = super.reason ?: ""
+}

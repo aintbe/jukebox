@@ -1,6 +1,7 @@
 package com.jukebox.api.common.advice
 
-import com.jukebox.api.common.exception.BusinessException
+import com.jukebox.core.exception.BusinessException
+import com.jukebox.core.exception.InternalException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -36,12 +37,5 @@ class GlobalExceptionHandler {
     fun handleNotFoundException(e: NoResourceFoundException): ResponseEntity<ErrorResponse> =
         ResponseEntity
             .status(HttpStatus.NOT_FOUND)
-            .body(GlobalResponse.error("NOT_FOUND", e.message ?: ""))
+            .body(GlobalResponse.error("NO_RESOURCE", e.message ?: ""))
 }
-
-private class InternalException :
-    BusinessException(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        "INTERNAL_SERVER_ERROR",
-        "Server encountered an unexpected error.",
-    )

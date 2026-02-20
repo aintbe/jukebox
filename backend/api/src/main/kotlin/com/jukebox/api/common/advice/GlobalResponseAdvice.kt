@@ -7,15 +7,16 @@ import org.springframework.http.server.ServerHttpRequest
 import org.springframework.http.server.ServerHttpResponse
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice
+import tools.jackson.databind.ObjectMapper
 
 @RestControllerAdvice
-class GlobalResponseAdvice : ResponseBodyAdvice<Any> {
+class GlobalResponseAdvice(
+    val objectMapper: ObjectMapper,
+) : ResponseBodyAdvice<Any> {
     override fun supports(
         returnType: MethodParameter,
         converterType: Class<out HttpMessageConverter<*>>,
-    ): Boolean {
-        return true // Apply to all end-points.
-    }
+    ) = returnType.parameterType != GlobalResponse::class.java
 
     override fun beforeBodyWrite(
         body: Any?,
@@ -26,6 +27,12 @@ class GlobalResponseAdvice : ResponseBodyAdvice<Any> {
         response: ServerHttpResponse,
     ): Any? {
         if (body is GlobalResponse<*>) return body
-        return GlobalResponse.success(body)
+
+        val wrappedBody = GlobalResponse.success(body)
+        if (selectedContentType == MediaType.APPLICATION_JSON) return wrappedBody
+
+        // If content type is set to [String], forcefully set the body to JSON format.
+        response.headers.contentType = MediaType.APPLICATION_JSON
+        return objectMapper.writeValueAsString(wrappedBody)
     }
 }

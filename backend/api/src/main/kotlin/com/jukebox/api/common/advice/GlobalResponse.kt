@@ -9,9 +9,12 @@ data class GlobalResponse<T>(
     val message: String? = null,
 ) {
     companion object {
-        fun <T> success(data: T): GlobalResponse<T> = GlobalResponse(data = data)
-
-        fun success(message: String): GlobalResponse<Nothing> = GlobalResponse(message = message)
+        fun <T> success(data: T): GlobalResponse<T> =
+            if (data is String) {
+                GlobalResponse(message = data)
+            } else {
+                GlobalResponse(data = data)
+            }
 
         fun error(
             code: String,
