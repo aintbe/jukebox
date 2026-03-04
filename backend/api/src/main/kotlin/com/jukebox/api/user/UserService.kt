@@ -1,6 +1,6 @@
 package com.jukebox.api.user
 
-import com.jukebox.api.common.exception.UnauthorizedException
+import com.jukebox.core.exception.UserNotFoundException
 import org.springframework.stereotype.Service
 
 @Service
@@ -9,5 +9,5 @@ class UserService(
 ) {
     fun getUserProfile(id: Long) =
         userRepository.findUserProfile(id)
-            ?: throw UnauthorizedException("USER_NOT_FOUND", "Could not find user (id=$id)")
+            ?: throw UserNotFoundException(id)
 }

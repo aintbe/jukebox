@@ -1,8 +1,7 @@
 package com.jukebox.api.user.dto
 
+import com.jukebox.core.dto.StreamingAccess
 import org.springframework.security.oauth2.core.OAuth2AccessToken
-import java.time.Instant
-import kotlin.random.Random
 
 class UserDto {
     class UserProfileResponse(
@@ -11,23 +10,16 @@ class UserDto {
     ) {
         val id = profile.id
         val username = profile.username
-        val streamingServiceAccess =
-            profile.streamingService?.let { serviceName ->
+        val streamingAccess =
+            profile.streamingServiceName?.let { serviceName ->
                 accessToken?.run {
-                    StreamingServiceAccess(
+                    StreamingAccess(
                         serviceName,
                         tokenValue,
                         expiresAt,
                     )
                 }
             }
+        val jukebox = profile.jukebox
     }
-}
-
-data class StreamingServiceAccess(
-    val serviceName: String,
-    val token: String,
-    val expiresAt: Instant?,
-) {
-    val a: Int = Random.nextInt()
 }

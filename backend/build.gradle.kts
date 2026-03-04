@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.spring") version "2.2.21" apply false
     id("org.springframework.boot") version "4.0.2" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
+    kotlin("plugin.serialization") version "2.3.10" apply false
 }
 
 allprojects {
@@ -21,6 +22,7 @@ subprojects {
         plugin("org.jetbrains.kotlin.plugin.spring")
         plugin("org.springframework.boot")
         plugin("io.spring.dependency-management")
+        plugin("org.jetbrains.kotlin.plugin.serialization")
     }
 
     java {
@@ -42,6 +44,7 @@ subprojects {
     dependencies {
         implementation("org.jetbrains.kotlin:kotlin-reflect")
         implementation("tools.jackson.module:jackson-module-kotlin")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
         testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     }

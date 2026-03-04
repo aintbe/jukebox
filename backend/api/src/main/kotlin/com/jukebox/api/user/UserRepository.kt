@@ -1,5 +1,6 @@
 package com.jukebox.api.user
 
+import com.jukebox.api.jukebox.entity.Jukebox
 import com.jukebox.api.streamingservice.entity.StreamingService
 import com.jukebox.api.streamingservice.entity.StreamingServiceUser
 import com.jukebox.api.streamingservice.entity.StreamingServiceUserPK
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Repository
 interface UserRepository :
     JpaRepository<User, Long>,
     KotlinJdslJpqlExecutor {
+    fun findUserById(id: Long): User?
+
     fun findUserByOAuth2(
         provider: String,
         providerId: String,
@@ -34,10 +37,15 @@ interface UserRepository :
                 path(User::id),
                 path(User::username),
                 path(StreamingService::name),
+                path(Jukebox::id),
+                path(Jukebox::handle),
             ).from(
                 entity(User::class),
                 leftJoin(User::streamingServiceUser),
                 leftJoin(StreamingServiceUser::service),
+                leftJoin(Jukebox::class).on(
+                    path(User::id).eq(path(Jukebox::host)(User::id)),
+                ),
             ).where(
                 path(User::id).eq(id),
             )
