@@ -1,9 +1,10 @@
 package com.jukebox.api.auth.jwt
 
 import com.jukebox.api.auth.dto.AuthUser
-import com.jukebox.api.common.cache.Cache
+import com.jukebox.api.common.cache.CacheQuery
 import com.jukebox.api.common.cache.put
 import com.jukebox.api.config.properties.JwtProperties
+import com.jukebox.core.exception.UnauthenticatedException
 import io.jsonwebtoken.ExpiredJwtException
 import io.jsonwebtoken.IncorrectClaimException
 import io.jsonwebtoken.Jwts
@@ -17,7 +18,7 @@ import java.util.Date
 import java.util.UUID
 
 @Component
-class JwtProvider(
+class TokenProvider(
     private val jwtProperties: JwtProperties,
     private val cacheManager: CacheManager,
 ) {
@@ -46,13 +47,19 @@ class JwtProvider(
     fun generateRefreshToken(user: AuthUser): String {
         // We don't have to create JWT for refresh tokens as the server keeps their states
         val token = UUID.randomUUID().toString()
-        cacheManager.put(Cache.REFRESH_TOKEN, "user:${user.userId}", token)
-
+        cacheManager.put(CacheQuery.SessionByToken(token), user.userId)
+        cacheManager.put(CacheQuery.SessionByUser(user.userId), token)
         return token
     }
 
-    fun extractPrincipal(token: String): AuthUser? =
-        runCatching {
+    fun generateAuthCode(user: AuthUser): String {
+        val code = UUID.randomUUID().toString()
+        cacheManager.put(CacheQuery.AuthUserToIssue(code), user)
+        return code
+    }
+
+    fun extractPrincipal(token: String): AuthUser {
+        try {
             val claims =
                 Jwts
                     .parserBuilder()
@@ -63,16 +70,18 @@ class JwtProvider(
                     .body
 
             return AuthUser.from(claims)
-        }.onFailure { e ->
-            val message =
+        } catch (e: Exception) {
+            val (errorCode, message) =
                 when (e) {
-                    is SecurityException, is MalformedJwtException -> "Invalid JWT"
-                    is ExpiredJwtException -> "Expired JWT"
-                    is IncorrectClaimException -> "JWT claim does not meet requirements"
-                    is IllegalArgumentException -> "JWT claims string is empty or invalid"
-                    is UnsupportedJwtException -> "Unsupported JWT"
-                    else -> "Error occurred while parsing JWT"
+                    is SecurityException, is MalformedJwtException, is IncorrectClaimException,
+                    is IllegalArgumentException, is UnsupportedJwtException,
+                    -> "INVALID_JWT" to "Requested token has invalid format."
+
+                    is ExpiredJwtException -> "EXPIRED_JWT" to "Please reissue access token."
+
+                    else -> "INVALID_JWT" to "Error occurred while parsing JWT."
                 }
-            log.debug(message, e)
-        }.getOrNull()
+            throw UnauthenticatedException(errorCode, message)
+        }
+    }
 }

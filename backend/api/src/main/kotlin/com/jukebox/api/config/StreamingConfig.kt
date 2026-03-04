@@ -10,9 +10,9 @@ import org.springframework.security.oauth2.client.web.AuthenticatedPrincipalOAut
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager
 
 @Configuration
-class StreamingServiceConfig {
+class StreamingConfig {
     @Bean
-    fun streamingServiceManager(
+    fun streamingManager(
         clientRegistrationRepository: ClientRegistrationRepository,
         authorizedClientService: RedisOAuth2AuthorizedClientService,
     ): OAuth2AuthorizedClientManager {

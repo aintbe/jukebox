@@ -1,7 +1,9 @@
 package com.jukebox.api.config
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.jukebox.api.common.cache.Cache
 import org.springframework.cache.CacheManager
+import org.springframework.cache.annotation.EnableCaching
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.redis.cache.RedisCacheConfiguration
@@ -14,10 +16,12 @@ import org.springframework.data.redis.serializer.RedisSerializationContext
 import org.springframework.data.redis.serializer.StringRedisSerializer
 import org.springframework.security.jackson.SecurityJacksonModules
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
-import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.DefaultTyping
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 
 @Configuration
+@EnableCaching
 class RedisConfig(
     private val redisConnectionFactory: RedisConnectionFactory,
 ) {
@@ -55,7 +59,25 @@ class RedisConfig(
     }
 
     @Bean
-    fun cacheManager(objectMapper: ObjectMapper): CacheManager {
+    fun cacheManager(): CacheManager {
+        // Store class information only if it matches following criteria.
+        val validator =
+            BasicPolymorphicTypeValidator
+                .builder()
+                .allowIfBaseType("com.jukebox.")
+                .allowIfBaseType(java.util.Collection::class.java)
+                .build()
+
+        val classMapper =
+            JsonMapper
+                .builder()
+                .polymorphicTypeValidator(validator)
+                .activateDefaultTyping(
+                    validator,
+                    DefaultTyping.NON_FINAL,
+                    JsonTypeInfo.As.PROPERTY,
+                ).build()
+
         // Serialize cache data in `String:json` format.
         val defaultConfig =
             RedisCacheConfiguration
@@ -64,7 +86,7 @@ class RedisConfig(
                     RedisSerializationContext.SerializationPair.fromSerializer(StringRedisSerializer()),
                 ).serializeValuesWith(
                     RedisSerializationContext.SerializationPair.fromSerializer(
-                        GenericJacksonJsonRedisSerializer(objectMapper),
+                        GenericJacksonJsonRedisSerializer(classMapper),
                     ),
                 )
 

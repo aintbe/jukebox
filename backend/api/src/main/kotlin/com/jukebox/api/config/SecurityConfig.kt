@@ -1,16 +1,19 @@
 package com.jukebox.api.config
 
 import com.jukebox.api.auth.jwt.JwtAuthenticationFilter
-import com.jukebox.api.auth.jwt.JwtHttpHandler
-import com.jukebox.api.auth.jwt.JwtProvider
+import com.jukebox.api.auth.jwt.TokenHttpHandler
+import com.jukebox.api.auth.jwt.TokenProvider
 import com.jukebox.api.auth.oauth2.OAuth2FailureHandler
 import com.jukebox.api.auth.oauth2.OAuth2SuccessHandler
 import com.jukebox.api.auth.oauth2.OAuth2UserService
 import com.jukebox.api.auth.oauth2.RedisOAuth2AuthorizedClientService
-import com.jukebox.api.config.properties.EndpointProperties
+import com.jukebox.api.common.advice.GlobalResponse
+import com.jukebox.core.dto.BusinessExceptionDto
+import com.jukebox.core.properties.EndpointProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -20,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import tools.jackson.databind.ObjectMapper
 
 @Configuration
 @EnableWebSecurity
@@ -32,8 +36,9 @@ class SecurityConfig {
         oAuth2AuthorizedClientService: RedisOAuth2AuthorizedClientService,
         oAuth2SuccessHandler: OAuth2SuccessHandler,
         oAuth2FailureHandler: OAuth2FailureHandler,
-        jwtProvider: JwtProvider,
-        jwtHttpHandler: JwtHttpHandler,
+        tokenProvider: TokenProvider,
+        tokenHttpHandler: TokenHttpHandler,
+        objectMapper: ObjectMapper,
     ): SecurityFilterChain {
         http
             // Add global CORS setting. If source is not explicitly provided,
@@ -65,23 +70,35 @@ class SecurityConfig {
             // Add JWT authentication filter before default authentication filter
             // so that the next filters & interceptors could work with context as expected.
             .addFilterBefore(
-                JwtAuthenticationFilter(jwtProvider, jwtHttpHandler),
+                JwtAuthenticationFilter(tokenProvider, tokenHttpHandler),
                 UsernamePasswordAuthenticationFilter::class.java,
             )
             // Spring security redirects user to login page when authentication fails.
             // Intercept the error and return error response right away.
             .exceptionHandling { handling ->
                 handling.authenticationEntryPoint { request, response, error ->
-                    response.apply {
-                        status = HttpStatus.UNAUTHORIZED.value()
-                        writer.write(error.message ?: "")
-                    }
+                    val customError = request.getAttribute("AUTHENTICATION_FILTER_ERROR") as? BusinessExceptionDto
+                    val body =
+                        GlobalResponse.error(
+                            code = customError?.errorCode ?: "UNAUTHENTICATED",
+                            message = customError?.reason ?: error.message ?: "",
+                        )
+
+                    response
+                        .apply {
+                            status = HttpStatus.UNAUTHORIZED.value()
+                            contentType = MediaType.APPLICATION_JSON_VALUE
+                        }.run {
+                            writer.write(objectMapper.writeValueAsString(body))
+                        }
                 }
                 handling.accessDeniedHandler { request, response, error ->
-                    response.apply {
-                        status = HttpStatus.FORBIDDEN.value()
-                        writer.write(error.message ?: "")
-                    }
+                    response
+                        .apply {
+                            status = HttpStatus.FORBIDDEN.value()
+                        }.run {
+                            writer.write(error.message ?: "")
+                        }
                 }
             }
 

@@ -1,10 +1,12 @@
 package com.jukebox.api.common.advice
 
+import com.jukebox.core.exception.BindingException
 import com.jukebox.core.exception.BusinessException
 import com.jukebox.core.exception.InternalException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.ServletRequestBindingException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -18,7 +20,7 @@ class GlobalExceptionHandler {
     fun handleBusinessException(e: BusinessException): ResponseEntity<ErrorResponse> =
         ResponseEntity
             .status(e.statusCode)
-            .body(GlobalResponse.error(e.errorCode, e.reason ?: ""))
+            .body(GlobalResponse.error(e.errorCode, e.reason))
 
     // Handle errors thrown by [require*] or [check*] assertions.
     @ExceptionHandler(IllegalArgumentException::class, IllegalStateException::class)
@@ -29,9 +31,13 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(ServletRequestBindingException::class)
     fun handleBindingException(e: ServletRequestBindingException): ResponseEntity<GlobalResponse<Nothing>> =
+        handleBusinessException(BindingException(e.message ?: "Failed to bind request to controller."))
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleNotFoundException(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> =
         ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
-            .body(GlobalResponse.error("INVALID_SYNTAX", e.message ?: ""))
+            .body(GlobalResponse.error("CANNOT_READ_BODY", e.message ?: ""))
 
     @ExceptionHandler(NoResourceFoundException::class)
     fun handleNotFoundException(e: NoResourceFoundException): ResponseEntity<ErrorResponse> =

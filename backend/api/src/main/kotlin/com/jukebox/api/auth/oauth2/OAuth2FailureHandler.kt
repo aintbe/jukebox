@@ -1,6 +1,6 @@
 package com.jukebox.api.auth.oauth2
 
-import com.jukebox.api.config.properties.EndpointProperties
+import com.jukebox.core.properties.EndpointProperties
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.core.AuthenticationException

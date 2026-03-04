@@ -1,9 +1,8 @@
 package com.jukebox.api.auth.oauth2
 
 import com.jukebox.api.auth.dto.OAuth2Principal
-import com.jukebox.api.auth.jwt.JwtHttpHandler
-import com.jukebox.api.auth.jwt.JwtProvider
-import com.jukebox.api.config.properties.EndpointProperties
+import com.jukebox.api.auth.jwt.TokenProvider
+import com.jukebox.core.properties.EndpointProperties
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.core.Authentication
@@ -15,8 +14,7 @@ import org.springframework.web.util.UriComponentsBuilder
 @Component
 class OAuth2SuccessHandler(
     private val failureHandler: OAuth2FailureHandler,
-    private val jwtProvider: JwtProvider,
-    private val jwtHttpHandler: JwtHttpHandler,
+    private val tokenProvider: TokenProvider,
     private val endpointProperties: EndpointProperties,
 ) : SimpleUrlAuthenticationSuccessHandler() {
     override fun onAuthenticationSuccess(
@@ -34,18 +32,15 @@ class OAuth2SuccessHandler(
             )
         }
 
-        val accessToken = jwtProvider.generateAccessToken(user)
+        val code = tokenProvider.generateAuthCode(user)
         val url =
             UriComponentsBuilder
                 .fromUriString(endpointProperties.oAuth2CallbackUrl)
-                // Response header is not relayed after redirection.
-                .queryParam("access_token", accessToken)
+                // Response header is not relayed after redirection;
+                // we need to use query params to maintain it.
+                .queryParam("code", code)
                 .build()
                 .toUriString()
-
-        jwtProvider.generateRefreshToken(user).let {
-            jwtHttpHandler.setRefreshToken(response, it)
-        }
         redirectStrategy.sendRedirect(request, response, url)
     }
 }

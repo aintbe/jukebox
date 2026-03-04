@@ -1,15 +1,15 @@
 package com.jukebox.api.auth.dto
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.jukebox.api.user.entity.User
 import io.jsonwebtoken.Claims
-import org.springframework.security.core.GrantedAuthority
-import org.springframework.security.core.authority.SimpleGrantedAuthority
 import java.security.Principal
 
-class AuthUser private constructor(
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+class AuthUser(
     val userId: Long,
     val username: String,
-    val authorities: List<GrantedAuthority>,
+    val authorities: List<UserRole>,
 ) : Principal {
     override fun getName(): String? = userId.toString()
 
@@ -19,7 +19,7 @@ class AuthUser private constructor(
                 userId = user.savedId,
                 username = user.username,
                 // TODO: add actual roles
-                authorities = listOf(SimpleGrantedAuthority("USER_ROLE")),
+                authorities = listOf(UserRole.TODO),
             )
 
         fun from(claims: Claims): AuthUser {
@@ -35,7 +35,7 @@ class AuthUser private constructor(
                 authString
                     .split(",")
                     .filter { it.isNotBlank() }
-                    .map { SimpleGrantedAuthority(it.trim()) }
+                    .map { UserRole.from(it.trim()) }
 
             return AuthUser(userId, username, authorities)
         }

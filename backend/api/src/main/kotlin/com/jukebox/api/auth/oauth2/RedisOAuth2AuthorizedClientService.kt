@@ -5,6 +5,7 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService
 import org.springframework.stereotype.Component
+import java.util.Date
 import java.util.concurrent.TimeUnit
 
 /**
@@ -36,7 +37,21 @@ class RedisOAuth2AuthorizedClientService(
 
         val key = generateKey(principal.name)
         oAuth2RedisTemplate.opsForValue().set(key, authorizedClient)
-        oAuth2RedisTemplate.expire(key, 28, TimeUnit.DAYS)
+
+        // Never expire refresh token if it's permanent token.
+        val refreshToken = authorizedClient.refreshToken
+        if (refreshToken != null && refreshToken.expiresAt == null) return
+
+        // Otherwise, set TTLs for the tokens.
+        val expiresAt =
+            (refreshToken ?: authorizedClient.accessToken)?.expiresAt?.let {
+                Date.from(it)
+            }
+        if (expiresAt != null) {
+            oAuth2RedisTemplate.expireAt(key, expiresAt)
+        } else {
+            oAuth2RedisTemplate.expire(key, 28, TimeUnit.DAYS)
+        }
     }
 
     override fun removeAuthorizedClient(
