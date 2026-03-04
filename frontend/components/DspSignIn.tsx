@@ -2,7 +2,7 @@
 
 import { REDIRECT_PATH_KEY } from "@/app/sign-in/callback/page"
 import { Button } from "@/components/ui/button"
-import { DSP_METADATA } from "@/lib/constants/dsp"
+import { apiDomain, DSP_METADATA } from "@/lib/constants"
 import { usePathname } from "next/navigation"
 
 export function DspSignIn() {
@@ -20,7 +20,7 @@ export function DspSignIn() {
             <li key={name}>
               <Button asChild style={{ backgroundColor: color }}>
                 <a
-                  href={`${process.env.NEXT_PUBLIC_API_DOMAIN}/oauth2/authorization/${name}`}
+                  href={`${apiDomain}/oauth2/authorization/${name}`}
                   onClick={handleClick}
                   className="flex items-center gap-2 text-white"
                 >
