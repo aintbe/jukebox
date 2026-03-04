@@ -1,2 +1,13 @@
+spring:
+  application:
+    name: jukebox-relay
+  profiles:
+    include: core
+
 server:
-  port: 8081
+  port: ${RELAY_SERVER_PORT}
+
+logging:
+  level:
+    com.jukebox: DEBUG
+    org.springframework.web.reactive.function.client.WebClient: DEBUG

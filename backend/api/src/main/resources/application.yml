@@ -1,6 +1,8 @@
 spring:
   application:
-    name: jukebox
+    name: jukebox-api
+  profiles:
+    include: core
 
   security:
     oauth2:
@@ -65,10 +67,5 @@ jwt:
   refresh-expires-in: 18000
   issuer: jukebox
 
-endpoint:
-  frontend:
-    domain: ${FRONTEND_DOMAIN}
-    o-auth2-callback: /sign-in/callback
-
-
-
+server:
+  port: ${API_SERVER_PORT}

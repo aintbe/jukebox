@@ -2,7 +2,7 @@ package com.jukebox.core.exception
 
 import org.springframework.http.HttpStatus
 
-class UnauthorizedException(
+open class ConflictException(
     errorCode: String,
     reason: String,
-) : BusinessException(HttpStatus.UNAUTHORIZED, errorCode, reason)
+) : BusinessException(HttpStatus.CONFLICT, errorCode, reason)

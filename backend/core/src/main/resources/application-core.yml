@@ -1,0 +1,10 @@
+endpoint:
+  frontend:
+    domain: ${FRONTEND_DOMAIN}
+    o-auth2-callback: /sign-in/callback
+  relay:
+    domain: http://localhost:${RELAY_SERVER_PORT}
+  spotify:
+    name: spotify
+    label: Spotify
+    domain: https://api.spotify.com/v1
