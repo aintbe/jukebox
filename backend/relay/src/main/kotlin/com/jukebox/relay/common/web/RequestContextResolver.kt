@@ -25,11 +25,11 @@ class RequestContextResolver : HandlerMethodArgumentResolver {
         val request = exchange.request
 
         return mono {
-            val userId = request.requireHeader<Long>(Constants.RELAY_USER_ID)
-            val jukeboxId = request.requireHeader<Long>(Constants.RELAY_JUKEBOX_ID)
-            val serviceName = request.requireHeader<String>(Constants.RELAY_STREAMING_SERVICE)
-            val token = request.requireHeader<String>(Constants.RELAY_STREAMING_TOKEN)
-            val expiresAt = request.requireHeader<Instant>(Constants.RELAY_STREAMING_EXPIRES_AT)
+            val userId = request.getHeader<Long>(HttpConstants.RELAY_USER_ID)
+            val jukeboxId = request.getHeader<Long>(HttpConstants.RELAY_JUKEBOX_ID)
+            val serviceName = request.getHeader<String>(HttpConstants.RELAY_STREAMING_SERVICE)
+            val token = request.getHeader<String>(HttpConstants.RELAY_STREAMING_TOKEN)
+            val expiresAt = request.getHeader<Instant?>(HttpConstants.RELAY_STREAMING_EXPIRES_AT)
 
             RequestContext(
                 jukeboxId,
@@ -43,10 +43,12 @@ class RequestContextResolver : HandlerMethodArgumentResolver {
         }
     }
 
-    private inline fun <reified T> ServerHttpRequest.requireHeader(name: String): T {
-        val value =
-            this.headers.getFirst(name)
-                ?: throw BadRequestException("HEADER_MISSING", "$name is required in request headers.")
+    private inline fun <reified T> ServerHttpRequest.getHeader(name: String): T {
+        val value = this.headers.getFirst(name)
+        if (value == null) {
+            if (null is T) return null as T // T is nullable
+            throw BadRequestException("HEADER_MISSING", "$name is required in request headers.")
+        }
 
         val converted =
             when (T::class) {

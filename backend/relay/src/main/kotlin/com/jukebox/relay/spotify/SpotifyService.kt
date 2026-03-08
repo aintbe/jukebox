@@ -1,7 +1,6 @@
 package com.jukebox.relay.spotify
 
 import com.jukebox.core.dto.RequestContext
-import com.jukebox.core.dto.RequestDto
 import com.jukebox.core.exception.ExternalException
 import com.jukebox.core.properties.EndpointProperties
 import com.jukebox.relay.common.web.StreamingClientService
@@ -12,6 +11,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.ClientResponse
+import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.awaitEntity
 import reactor.core.publisher.Mono
 
@@ -25,29 +25,7 @@ class SpotifyService(
             .map { it.error.message }
 
     /**
-     * [Spotify API] Transfer playback to a new device and optionally begin playback.
-     *
-     * cf. https://developer.spotify.com/documentation/web-api/reference/transfer-a-users-playback
-     */
-    suspend fun transferPlayback(
-        context: RequestContext,
-        request: RequestDto.Connect,
-    ) {
-        client
-            .request(
-                method = HttpMethod.PUT,
-                uri = "/me/player",
-                token = context.streamingAccess.token,
-                body = SpotifyDto.TransferRequest(request).toBody(),
-            ).onStatus({ it.isSameCodeAs(HttpStatus.NOT_FOUND) }) {
-                log.error("Spotify returned invalid device id. (jukeboxId=${context.jukeboxId})")
-                Mono.error(ExternalException(serviceLabel))
-            }.toBodilessEntity() // no need to check response body
-            .awaitSingle()
-    }
-
-    /**
-     * [Spotify API] Get information about the user’s current playback state, including track or episode, progress, and active device.
+     * [Spotify Web API] Get information about the user’s current playback state, including track or episode, progress, and active device.
      *
      * cf. https://developer.spotify.com/documentation/web-api/reference/get-information-about-the-users-current-playback
      */
@@ -58,4 +36,42 @@ class SpotifyService(
                 uri = "/me/player",
                 token = context.streamingAccess.token,
             ).awaitEntity<SpotifyDto.PlaybackStateResponse>()
+
+    /**
+     * [Spotify Web API] Transfer playback to a new device and optionally begin playback.
+     *
+     * cf. https://developer.spotify.com/documentation/web-api/reference/transfer-a-users-playback
+     */
+    suspend fun transferPlayback(
+        context: RequestContext,
+        request: SpotifyDto.TransferRequest,
+    ) {
+        client
+            .request(
+                method = HttpMethod.PUT,
+                uri = "/me/player",
+                token = context.streamingAccess.token,
+                body = request.toBody(),
+            ).onStatus({ it.isSameCodeAs(HttpStatus.NOT_FOUND) }) {
+                log.error("Spotify returned invalid device id ${request.deviceId}. (jukeboxId=${context.jukeboxId})")
+                Mono.error(ExternalException(serviceLabel))
+            }.toBodilessEntity() // no need to check response body
+            .awaitSingle()
+    }
+
+    /**
+     * [Spotify Web API]
+     * cf. https://developer.spotify.com/documentation/web-api/reference/get-a-users-available-devices
+     */
+    suspend fun getActiveDeviceId(context: RequestContext): String? {
+        val response =
+            client
+                .request(
+                    method = HttpMethod.GET,
+                    uri = "/me/player/devices",
+                    token = context.streamingAccess.token,
+                ).awaitBodyOrNull<SpotifyDto.DeviceResponse>()
+
+        return response?.devices?.find { it.isActive }?.id
+    }
 }

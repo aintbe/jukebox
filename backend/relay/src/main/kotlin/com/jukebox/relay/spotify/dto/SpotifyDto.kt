@@ -2,7 +2,7 @@ package com.jukebox.relay.spotify.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.jukebox.core.dto.RequestDto
+import jakarta.validation.constraints.NotBlank
 
 class SpotifyDto {
     data class ErrorResponse(
@@ -14,20 +14,8 @@ class SpotifyDto {
         )
     }
 
-    @JvmInline
-    value class TransferRequest(
-        private val request: RequestDto.Connect,
-    ) {
-        fun toBody() =
-            mapOf(
-                "device_ids" to listOf(request.deviceId),
-                "play" to false,
-            )
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class PlaybackStateResponse(
-        val device: Device,
+    data class DeviceResponse(
+        val devices: List<Device>,
     ) {
         @JsonIgnoreProperties(ignoreUnknown = true)
         data class Device(
@@ -39,4 +27,24 @@ class SpotifyDto {
             val type: String,
         )
     }
+
+    data class ConnectionResponse(
+        val deviceId: String?,
+    )
+
+    data class TransferRequest(
+        @field:NotBlank
+        val deviceId: String,
+    ) {
+        fun toBody() =
+            mapOf(
+                "device_ids" to listOf(deviceId),
+                "play" to false,
+            )
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PlaybackStateResponse(
+        val device: DeviceResponse.Device,
+    )
 }
