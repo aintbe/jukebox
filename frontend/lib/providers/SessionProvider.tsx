@@ -1,7 +1,5 @@
 "use client"
 
-import { isClient, SECOND_IN_MS } from "@/lib/constants"
-import { Session, ExposedSession } from "@/types/app"
 import {
   useEffect,
   useState,
@@ -10,28 +8,24 @@ import {
   useMemo,
   createContext,
 } from "react"
-import { Trigger, BroadcastMessage, Action, getContextSession } from "./utils"
-import { requireContext } from "@/lib/utils"
+import { Session, ExposedSession, SessionPromise } from "@/types/app"
+import { SEC_IN_MS } from "@/lib/constants"
+import { getSession } from "../auth/actions"
 
-type SessionContextValue = SessionSetter &
-  (
-    | {
-        session: ExposedSession
-        isAuthenticated: true
-      }
-    | {
-        session: undefined
-        isAuthenticated: false
-      }
-  )
-
-interface SessionSetter {
-  update: (action?: Action) => Promise<void>
+type SessionContextValue = (
+  | { session: ExposedSession; isAuthenticated: true }
+  | { session: undefined; isAuthenticated: false }
+) & {
+  refresh: () => Promise<void>
+  clear: () => Promise<void>
 }
 
-export const SessionContext = createContext?.<SessionContextValue | undefined>(
-  undefined,
-)
+export const SessionContext = createContext<SessionContextValue>({
+  session: undefined,
+  isAuthenticated: false,
+  refresh: async () => undefined,
+  clear: async () => undefined,
+})
 
 interface SessionSync {
   isUpdating: boolean
@@ -39,17 +33,16 @@ interface SessionSync {
   accessToken: string | undefined
 }
 
-const channel = isClient ? new BroadcastChannel("session") : undefined
+const channel =
+  typeof window !== "undefined" ? new BroadcastChannel("session") : undefined
 
 interface Props {
   children: React.ReactNode
-  initializer: Session | undefined
+  initialSession: Session | undefined
 }
 
-export function SessionProvider({ children, initializer }: Props) {
-  requireContext(SessionContext)
-
-  const [session, setSession] = useState<Session | undefined>(initializer)
+export function SessionProvider({ children, initialSession }: Props) {
+  const [session, setSession] = useState<Session | undefined>(initialSession)
   const syncRef = useRef<SessionSync>({
     isUpdating: false,
     lastUpdated: 0,
@@ -68,19 +61,20 @@ export function SessionProvider({ children, initializer }: Props) {
     [session?.userId, session?.username],
   )
 
+  // Check session forcefully when requested, and update if it changed.
   const update = useCallback(
-    async ({ action, cascade }: { action: Action; cascade: boolean }) => {
+    async (action: Action, cascade: boolean = true) => {
       if (syncRef.current.isUpdating) return
       syncRef.current.isUpdating = true
 
       const session = await getContextSession(action)
       const renewed = syncRef.current.accessToken !== session?.accessToken
 
-      // Update session only if the session is actually renewed.
       if (renewed) {
         setSession(session)
         syncRef.current.accessToken = session?.accessToken
 
+        // Cascade the changes to other browsers.
         if (cascade) {
           channel?.postMessage({ action: Action.REFRESH, trigger: "broadcast" })
         }
@@ -92,46 +86,41 @@ export function SessionProvider({ children, initializer }: Props) {
     [],
   )
 
+  // Update session automatically after access token expires.
   useEffect(() => {
-    // Update session after access token expires.
     if (!session?.accessExpiresAt) return
 
     const timeout = Date.now() - session.accessExpiresAt
-    // Add jitter so that it wouldn't try to request reissue
+    // Add jitter so that the browser wouldn't try to request reissue
     // all at the same time when multiple tabs are open.
-    const jitter = Math.floor(Math.random() * 10 * SECOND_IN_MS)
-    const timer = setTimeout(
-      () => update({ action: Action.REFRESH, cascade: true }),
-      timeout + jitter,
-    )
+    const jitter = Math.floor(Math.random() * 10 * SEC_IN_MS)
+    const timer = setTimeout(() => update(Action.REFRESH), timeout + jitter)
 
     return () => {
       if (timer) clearTimeout(timer)
     }
   }, [session?.accessExpiresAt, update])
 
+  // Update session automatically if the update request was broadcasted
+  // from other brower tabs or browser states have changed.
   useEffect(() => {
-    // We do not need to update access token too frequently.
-    const canUpdate = () =>
-      syncRef.current.lastUpdated + 60 * SECOND_IN_MS < Date.now()
-
     const handleUpdate = (trigger: Trigger) => {
       if (trigger == "broadcast") {
-        // Already broadcasted; do not fall in loop
-        update({ action: Action.REFRESH, cascade: false })
+        update(
+          Action.REFRESH,
+          false, // Already broadcasted; do not fall in loop
+        )
       } else if (trigger == "window_event") {
-        if (canUpdate()) {
-          update({ action: Action.REFRESH, cascade: true })
-        }
+        const has1MinPassed =
+          syncRef.current.lastUpdated + 60 * SEC_IN_MS < Date.now()
+
+        // No need to update access token too frequently on window events
+        if (has1MinPassed) update(Action.REFRESH)
       } else {
         console.error("Unknown trigger:", trigger)
       }
     }
 
-    // Initialize session on load.
-    handleUpdate("broadcast")
-
-    // Update if broadcasted or focus/network has changed.
     const messageHandler = ({ data }: MessageEvent<BroadcastMessage>) =>
       handleUpdate(data.trigger)
     const windowEventHandler = () => handleUpdate("window_event")
@@ -155,9 +144,8 @@ export function SessionProvider({ children, initializer }: Props) {
           }
         : { session: undefined, isAuthenticated: false }),
 
-      // This will try to update session regardless of the last updated time.
-      update: (action: Action = Action.REFRESH) =>
-        update({ action, cascade: true }),
+      refresh: () => update(Action.REFRESH),
+      clear: () => update(Action.CLEAR),
     }),
     [exposedSession, update],
   )
@@ -165,4 +153,28 @@ export function SessionProvider({ children, initializer }: Props) {
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
   )
+}
+
+enum Action {
+  REFRESH = "refresh",
+  CLEAR = "delete",
+}
+
+const getContextSession = async (action: Action): SessionPromise => {
+  switch (action) {
+    case Action.REFRESH:
+      return getSession()
+    case Action.CLEAR:
+      return undefined
+    default:
+      console.error("Unsupported session update action:", action)
+      return
+  }
+}
+
+export type Trigger = "broadcast" | "window_event"
+
+export interface BroadcastMessage {
+  action: Action
+  trigger: Trigger
 }
