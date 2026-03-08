@@ -1,11 +1,10 @@
 import "server-only"
-
 import type { middleware } from "@/middleware"
 import { SessionPromise } from "@/types/app"
-import { decryptSession } from "../crypto"
+import { cacheTag } from "next/cache"
 import { cookies } from "next/headers"
 import { AUTH_COOKIE } from "../constants"
-import { cacheTag } from "next/cache"
+import { decryptSession } from "../crypto"
 
 /**
  * Get session on server component. Since server components does not

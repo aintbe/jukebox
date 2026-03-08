@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query"
 import { ApiData, UserProfile } from "@/types/api"
-import { usePlayerStore } from "../stores/usePlayerStore"
 import { ExposedSession } from "@/types/app"
+import { useQuery } from "@tanstack/react-query"
+import { usePlayerStore } from "../stores/player"
 import { api } from "./client"
 
 export const userProfileOptions = (session?: ExposedSession) => ({
