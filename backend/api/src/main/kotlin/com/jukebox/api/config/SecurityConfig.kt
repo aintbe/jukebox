@@ -4,6 +4,7 @@ import com.jukebox.api.auth.jwt.JwtAuthenticationFilter
 import com.jukebox.api.auth.jwt.TokenHttpHandler
 import com.jukebox.api.auth.jwt.TokenProvider
 import com.jukebox.api.auth.oauth2.OAuth2FailureHandler
+import com.jukebox.api.auth.oauth2.OAuth2RequestRepository
 import com.jukebox.api.auth.oauth2.OAuth2SuccessHandler
 import com.jukebox.api.auth.oauth2.OAuth2UserService
 import com.jukebox.api.auth.oauth2.RedisOAuth2AuthorizedClientService
@@ -12,6 +13,7 @@ import com.jukebox.core.dto.BusinessExceptionDto
 import com.jukebox.core.properties.EndpointProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
@@ -34,6 +36,7 @@ class SecurityConfig {
         http: HttpSecurity,
         oAuth2UserService: OAuth2UserService,
         oAuth2AuthorizedClientService: RedisOAuth2AuthorizedClientService,
+        oAuth2RequestRepository: OAuth2RequestRepository,
         oAuth2SuccessHandler: OAuth2SuccessHandler,
         oAuth2FailureHandler: OAuth2FailureHandler,
         tokenProvider: TokenProvider,
@@ -63,6 +66,8 @@ class SecurityConfig {
                     .userInfoEndpoint { c -> c.userService(oAuth2UserService) }
                     // This registers relayed principal in Redis to use it later.
                     .authorizedClientService(oAuth2AuthorizedClientService)
+                    // NOTE: This is workaround to fix falsy behavior of the default handler.
+                    .authorizationEndpoint { e -> e.authorizationRequestRepository(oAuth2RequestRepository) }
                     // Generate JWT using the relayed principal for authentication in app.
                     .successHandler(oAuth2SuccessHandler)
                     .failureHandler(oAuth2FailureHandler)
