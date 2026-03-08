@@ -1,20 +1,20 @@
 "use server"
 
+import { SessionPromise } from "@/types/app"
+import { isHTTPError } from "ky"
 import { cookies } from "next/headers"
+import { serverApi } from "../api/server"
+import { publicApi } from "../api/utils"
+import { AUTH_COOKIE } from "../constants"
+import { getServerSession } from "./server"
 import {
   extractAccessToken,
   getRefreshTokenCookie,
   getSessionCookie,
+  parseAccessToken,
   parseRefreshToken,
-  parseSession,
-  reissue as reissue,
+  reissue,
 } from "./utils"
-import { SessionPromise } from "@/types/app"
-import { HTTPError } from "ky"
-import { AUTH_COOKIE } from "../constants"
-import { getServerSession } from "./server"
-import { serverApi } from "../api/server"
-import { publicApi } from "../api/utils"
 
 /**
  * Get session via server action. All server actions and client components
@@ -36,7 +36,7 @@ export const getSession = async (): SessionPromise => {
   if (newSession) {
     cookieStore.set(await getSessionCookie(newSession))
   } else {
-    cookieStore.set(getRefreshTokenCookie())
+    cookieStore.delete(AUTH_COOKIE.REFRESH_TOKEN)
   }
 
   return newSession
@@ -71,14 +71,14 @@ export async function issue(code: string | null): Promise<boolean> {
     const res = await publicApi.post("auth/issue", { json: { code } })
 
     const accessToken = extractAccessToken(res.headers)
-    const session = accessToken ? parseSession(accessToken) : null
+    const session = accessToken ? parseAccessToken(accessToken) : undefined
 
     const setCookies = res.headers.getSetCookie()
     const refreshToken = parseRefreshToken(setCookies)
 
     if (!session || !refreshToken) {
       console.error(
-        "`accessToken` or `refreshToken` is not found in the response header.",
+        `"${AUTH_COOKIE.SESSION}" or "${AUTH_COOKIE.REFRESH_TOKEN}" is not found in the response header.`,
       )
       return false
     }
@@ -89,7 +89,7 @@ export async function issue(code: string | null): Promise<boolean> {
 
     return true
   } catch (error) {
-    if (error instanceof HTTPError) {
+    if (isHTTPError(error)) {
       console.debug(await error.response.json())
     }
     return false

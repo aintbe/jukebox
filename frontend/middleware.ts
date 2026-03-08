@@ -1,9 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import {
-  getRefreshTokenCookie,
-  getSessionCookie,
-  reissue,
-} from "./lib/auth/utils"
+import { getSessionCookie, reissue } from "./lib/auth/utils"
 import { AUTH_COOKIE } from "./lib/constants"
 
 export const middleware = async (request: NextRequest) => {
@@ -16,7 +12,7 @@ export const middleware = async (request: NextRequest) => {
     if (session) {
       response.cookies.set(await getSessionCookie(session))
     } else {
-      response.cookies.set(getRefreshTokenCookie())
+      response.cookies.delete(AUTH_COOKIE.REFRESH_TOKEN)
     }
   }
 

@@ -1,10 +1,10 @@
-import { jwtDecode, JwtPayload } from "jwt-decode"
-import { AUTH_COOKIE, SECOND_IN_MS } from "../constants"
-import { HTTPError } from "ky"
-import { ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies"
 import { Session, SessionPromise } from "@/types/app"
-import { encryptSession } from "../crypto"
+import { jwtDecode, JwtPayload } from "jwt-decode"
+import { isHTTPError } from "ky"
+import { ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies"
 import { publicApi } from "../api/utils"
+import { AUTH_COOKIE, SEC_IN_MS } from "../constants"
+import { encryptSession } from "../crypto"
 
 export const reissue = async (refreshToken: string): SessionPromise => {
   try {
@@ -13,10 +13,11 @@ export const reissue = async (refreshToken: string): SessionPromise => {
     })
     const accessToken = extractAccessToken(res.headers)
     if (accessToken) {
-      return parseSession(accessToken)
+      return parseAccessToken(accessToken)
     }
   } catch (error) {
-    if (error instanceof HTTPError) {
+    console.debug("Failed to reissue access token.")
+    if (isHTTPError(error)) {
       console.debug(await error.response.json())
     }
   }
@@ -30,16 +31,14 @@ interface AccessToken extends JwtPayload {
   username: string
 }
 
-export const parseSession = (accessToken: string): Session | undefined => {
+export const parseAccessToken = (accessToken: string): Session | undefined => {
   const decoded = jwtDecode<AccessToken>(accessToken)
   const user: Session = {
     userId: decoded.userId,
     username: decoded.username,
     accessToken,
     // Expire access token earlier so it would be reissued preemptively.
-    accessExpiresAt: decoded.exp
-      ? decoded.exp * SECOND_IN_MS - 60 * SECOND_IN_MS
-      : 0,
+    accessExpiresAt: decoded.exp ? decoded.exp * SEC_IN_MS - 60 * SEC_IN_MS : 0,
   }
 
   return Object.values(user).every(Boolean) ? user : undefined
@@ -53,15 +52,15 @@ interface RefreshToken {
 export const parseRefreshToken = (
   cookies: string[],
 ): RefreshToken | undefined => {
-  const refreshCookie = cookies.find((c) => c.startsWith("refreshToken="))
+  const refreshCookie = cookies.find(c => c.startsWith("refreshToken="))
   if (!refreshCookie) {
     return
   }
-  const attributes = refreshCookie.split(";").map((s) => s.trim())
+  const attributes = refreshCookie.split(";").map(s => s.trim())
 
   const value = attributes.at(0)?.split("=")?.at(1)
   const maxAgeStr = attributes
-    .find((attr) => attr.toLowerCase().startsWith("max-age="))
+    .find(attr => attr.toLowerCase().startsWith("max-age="))
     ?.split("=")
     .at(1)
   const maxAge = maxAgeStr ? parseInt(maxAgeStr) : undefined
@@ -107,11 +106,11 @@ export const getSessionCookie = async (
  * @returns ResponseCookie
  */
 export const getRefreshTokenCookie = (
-  refreshToken?: RefreshToken,
+  refreshToken: RefreshToken,
 ): ResponseCookie => ({
   ...authCookie,
   name: AUTH_COOKIE.REFRESH_TOKEN,
-  value: refreshToken?.value ?? "",
+  value: refreshToken.value,
   // Delete cookie if `refreshToken` is not given.
-  maxAge: refreshToken?.maxAge ?? 0,
+  maxAge: refreshToken.maxAge,
 })
