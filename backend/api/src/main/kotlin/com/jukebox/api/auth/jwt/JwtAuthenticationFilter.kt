@@ -5,6 +5,7 @@ import com.jukebox.core.exception.UnauthenticatedException
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.MDC
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.SimpleGrantedAuthority
@@ -33,6 +34,7 @@ class JwtAuthenticationFilter(
                     },
                 )
             SecurityContextHolder.getContext().authentication = authentication
+            MDC.put("userId", principal.name) // Display user ID in logs.
         } catch (e: Exception) {
             // Store occurred exception to add it into the response later.
             // Check [SecurityConfig.filterChain > authenticationEntryPoint] for usage.
@@ -41,5 +43,6 @@ class JwtAuthenticationFilter(
             }
         }
         chain.doFilter(request, response)
+        MDC.clear()
     }
 }

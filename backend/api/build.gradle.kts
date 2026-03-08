@@ -9,6 +9,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.zalando:logbook-spring-boot-starter:4.0.2")
 
     // Security
     implementation("org.springframework.boot:spring-boot-starter-security")

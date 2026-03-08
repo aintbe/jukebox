@@ -1,0 +1,8 @@
+logging:
+  pattern:
+    console: "%clr(%d{${LOG_DATEFORMAT_PATTERN}}){faint} %clr(${LOG_LEVEL_PATTERN}) %clr(${PID:-}){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{36}){cyan} %clr(:){faint} ${LOG_CORRELATION_PATTERN} %m%n${LOG_EXCEPTION_CONVERSION_WORD}"
+    correlation: "%clr([userId=%X{userId}, traceId=%X{traceId}]){bright_blue}"
+
+logbook:
+  format:
+    style: http

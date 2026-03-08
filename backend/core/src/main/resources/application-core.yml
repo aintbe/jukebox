@@ -1,6 +1,7 @@
 endpoint:
   frontend:
     domain: ${FRONTEND_DOMAIN}
+    o-auth2-sign-in: /sign-in/streaming-service
     o-auth2-callback: /sign-in/callback
   relay:
     domain: http://localhost:${RELAY_SERVER_PORT}
