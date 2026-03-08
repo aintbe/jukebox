@@ -3,6 +3,7 @@ package com.jukebox.api.auth
 import com.jukebox.api.auth.dto.AuthDto
 import com.jukebox.api.auth.dto.AuthUser
 import com.jukebox.api.auth.jwt.TokenHttpHandler
+import com.jukebox.core.constants.HttpConstants
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
@@ -44,7 +45,7 @@ class AuthController(
         val cookie = tokenHttpHandler.createRefreshCookie(tokens.refreshToken)
         return ResponseEntity
             .ok()
-            .header(HttpHeaders.AUTHORIZATION, "Bearer ${tokens.accessToken}")
+            .header(HttpHeaders.AUTHORIZATION, "${HttpConstants.AUTHORIZATION_TYPE} ${tokens.accessToken}")
             .header(HttpHeaders.SET_COOKIE, cookie.toString())
             .build()
     }
@@ -56,7 +57,7 @@ class AuthController(
         val token = authService.reissueAccessToken(refreshToken)
         return ResponseEntity
             .ok()
-            .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+            .header(HttpHeaders.AUTHORIZATION, "${HttpConstants.AUTHORIZATION_TYPE} $token")
             .build()
     }
 }

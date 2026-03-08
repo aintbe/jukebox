@@ -1,4 +1,4 @@
-package com.jukebox.api.jukebox.web
+package com.jukebox.api.common.web
 
 import com.jukebox.api.streamingservice.StreamingServiceRepository
 import com.jukebox.core.dto.RequestContext

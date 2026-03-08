@@ -1,6 +1,9 @@
-package com.jukebox.core
+package com.jukebox.core.constants
 
-object Constants {
+object HttpConstants {
+    const val REFRESH_TOKEN = "refreshToken"
+    const val AUTHORIZATION_TYPE = "Bearer"
+
     const val RELAY_USER_ID = "X-Relay-User-ID"
     const val RELAY_JUKEBOX_ID = "X-Relay-Jukebox-ID"
     const val RELAY_STREAMING_SERVICE = "X-Relay-Streaming-Service"

@@ -1,6 +1,6 @@
 package com.jukebox.api.jukebox
 
-import com.jukebox.core.Constants
+import com.jukebox.core.constants.HttpConstants
 import com.jukebox.core.dto.BusinessExceptionDto
 import com.jukebox.core.dto.RequestContext
 import com.jukebox.core.exception.InternalException
@@ -51,12 +51,14 @@ class RelayClient(
                 .method(method)
                 // `serviceName` work as controller prefix in relay server.
                 .uri("/${context.streamingAccess.serviceName}/${uri.removePrefix("/")}")
-                .headers {
-                    it.add(Constants.RELAY_USER_ID, context.userId.toString())
-                    it.add(Constants.RELAY_JUKEBOX_ID, context.jukeboxId.toString())
-                    it.add(Constants.RELAY_STREAMING_SERVICE, context.streamingAccess.serviceName)
-                    it.add(Constants.RELAY_STREAMING_TOKEN, context.streamingAccess.token)
-                    it.add(Constants.RELAY_STREAMING_EXPIRES_AT, context.streamingAccess.expiresAt.toString())
+                .headers { headers ->
+                    headers.add(HttpConstants.RELAY_USER_ID, context.userId.toString())
+                    headers.add(HttpConstants.RELAY_JUKEBOX_ID, context.jukeboxId.toString())
+                    headers.add(HttpConstants.RELAY_STREAMING_SERVICE, context.streamingAccess.serviceName)
+                    headers.add(HttpConstants.RELAY_STREAMING_TOKEN, context.streamingAccess.token)
+                    context.streamingAccess.expiresAt?.also {
+                        headers.add(HttpConstants.RELAY_STREAMING_EXPIRES_AT, it.toString())
+                    }
                 }.let {
                     body?.let { body -> it.body(body) } ?: it
                 }

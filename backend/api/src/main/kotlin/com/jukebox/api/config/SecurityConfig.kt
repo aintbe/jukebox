@@ -110,9 +110,9 @@ class SecurityConfig {
         val configuration =
             CorsConfiguration().apply {
                 allowedOrigins = listOf(endpointProperties.frontend.domain)
-                allowedMethods = listOf("POST", "GET", "DELETE", "PUT")
+                allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 allowedHeaders = listOf("*")
-                exposedHeaders = listOf("Content-Type", "Authorization")
+                exposedHeaders = listOf(HttpHeaders.CONTENT_TYPE, HttpHeaders.AUTHORIZATION)
                 allowCredentials = true
             }
 

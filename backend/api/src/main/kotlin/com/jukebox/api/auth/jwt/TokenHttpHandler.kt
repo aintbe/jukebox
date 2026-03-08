@@ -1,8 +1,10 @@
 package com.jukebox.api.auth.jwt
 
 import com.jukebox.api.config.properties.JwtProperties
+import com.jukebox.core.constants.HttpConstants
 import com.jukebox.core.exception.UnauthenticatedException
 import jakarta.servlet.http.HttpServletRequest
+import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.stereotype.Component
 
@@ -34,9 +36,9 @@ class TokenHttpHandler(
     fun deleteRefreshCookie() = setRefreshCookie("", CookieAction.DELETE)
 
     fun extractAccessToken(request: HttpServletRequest): String {
-        val bearer = request.getHeader("Authorization")
-        if (bearer != null && bearer.startsWith("Bearer ")) {
-            return bearer.substring("Bearer ".length)
+        val bearer = request.getHeader(HttpHeaders.AUTHORIZATION)
+        if (bearer != null && bearer.startsWith("${HttpConstants.AUTHORIZATION_TYPE} ")) {
+            return bearer.substring("${HttpConstants.AUTHORIZATION_TYPE} ".length)
         }
         throw UnauthenticatedException("MISSING_JWT", "Authorization header is missing.")
     }

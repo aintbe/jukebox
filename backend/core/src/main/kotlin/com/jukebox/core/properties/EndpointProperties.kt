@@ -5,6 +5,7 @@ data class EndpointProperties(
     val relay: ServerConfig,
     val spotify: StreamingServerConfig,
 ) {
+    val oAuth2SignInUrl = combine(frontend.domain, frontend.oAuth2SignIn)
     val oAuth2CallbackUrl = combine(frontend.domain, frontend.oAuth2Callback)
 
     private fun combine(vararg segments: String) =
@@ -14,6 +15,7 @@ data class EndpointProperties(
 
 data class FrontendServerConfig(
     val domain: String,
+    val oAuth2SignIn: String,
     val oAuth2Callback: String,
 )
 

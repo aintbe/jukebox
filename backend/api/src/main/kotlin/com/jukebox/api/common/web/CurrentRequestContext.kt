@@ -1,4 +1,4 @@
-package com.jukebox.api.jukebox.web
+package com.jukebox.api.common.web
 
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 

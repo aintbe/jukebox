@@ -1,6 +1,6 @@
 package com.jukebox.api.config
 
-import com.jukebox.api.jukebox.web.RequestContextResolver
+import com.jukebox.api.common.web.RequestContextResolver
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer

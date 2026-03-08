@@ -1,6 +1,6 @@
 package com.jukebox.relay.common.web
 
-import com.jukebox.core.Constants
+import com.jukebox.core.constants.HttpConstants
 import com.jukebox.core.dto.RequestContext
 import com.jukebox.core.dto.StreamingAccess
 import com.jukebox.core.exception.BadRequestException

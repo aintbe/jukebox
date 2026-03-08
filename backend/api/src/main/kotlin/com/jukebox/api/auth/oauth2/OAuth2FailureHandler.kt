@@ -19,7 +19,7 @@ class OAuth2FailureHandler(
     ) {
         val url =
             UriComponentsBuilder
-                .fromUriString(endpointProperties.oAuth2CallbackUrl)
+                .fromUriString(endpointProperties.oAuth2SignInUrl)
                 .build()
                 .toUriString()
         redirectStrategy.sendRedirect(request, response, url)
