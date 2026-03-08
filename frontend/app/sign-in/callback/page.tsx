@@ -1,34 +1,30 @@
 "use client"
 
-import { Suspense, useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { issue } from "@/lib/auth/actions"
-import { useSession } from "@/components/SessionProvider"
+import { useSession } from "@/lib/providers"
 
 export const REDIRECT_PATH_KEY = "redirect-to-after-sign-in"
 export const DEFAULT_REDIRECT_PATH = "/"
 
-export default function DspSignInCallbackPage() {
+export default function SignInCallbackPage() {
+  useSignIn()
   return (
     <div>
       {/* // TODO: show intermediate image */}
       <div className="flex h-screen items-center justify-center">
         <p>로그인 처리 중...</p>
       </div>
-
-      <Suspense fallback={null}>
-        <SignInScript />
-      </Suspense>
     </div>
   )
 }
 
-function SignInScript() {
+const useSignIn = () => {
   const searchParams = useSearchParams()
-  const code = searchParams.get("code")
 
-  const { session, update } = useSession()
+  const { session, refresh } = useSession()
   const router = useRouter()
 
   const hasProcessed = useRef(false)
@@ -39,8 +35,9 @@ function SignInScript() {
     hasProcessed.current = true
 
     const signIn = async (): Promise<string | undefined> => {
+      const code = searchParams.get("code")
       const signedIn = await issue(code)
-      await update()
+      await refresh()
 
       if (!signedIn) {
         toast.error("Failed to sign in.")
@@ -59,10 +56,8 @@ function SignInScript() {
     }
 
     if (!session) {
-      signIn().then((path) => redirect(path))
+      signIn().then(path => redirect(path))
     }
     redirect()
-  }, [code, router, session, update])
-
-  return null
+  }, [router, session, refresh, searchParams])
 }

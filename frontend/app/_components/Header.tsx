@@ -1,7 +1,14 @@
 "use client"
 
+import { useCallback } from "react"
+import { isHTTPError } from "ky"
+import { User } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { signOut } from "@/lib/auth/actions"
+import { useSession } from "@/lib/providers"
+import { useAuthViewStore } from "@/lib/stores/auth-view"
 import { DspSignIn } from "@/components/DspSignIn"
-import { Action, useSession } from "@/components/SessionProvider"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,35 +25,26 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { signOut } from "@/lib/auth/actions"
-import { useAuthViewStore } from "@/lib/stores/useAuthViewStore"
-import { HTTPError } from "ky"
-import { User } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useCallback } from "react"
-import { toast } from "sonner"
 
 export function Header() {
   const { currentView, openDspSignIn, handleDialog } = useAuthViewStore()
 
-  const { session, update } = useSession()
+  const { session, clear } = useSession()
   const router = useRouter()
 
   const handleSignOut = useCallback(async () => {
     try {
       await signOut()
-      await update(Action.DELETE)
+      await clear()
 
       toast.success("See you :)")
       router.refresh()
     } catch (error) {
-      if (error instanceof HTTPError) {
+      if (isHTTPError(error)) {
         toast.error("Failed to sign out. Try again later.")
-        console.debug("ASDF", error)
       }
-      console.log("asdf", error)
     }
-  }, [router, update])
+  }, [router, clear])
 
   return (
     <header className="flex h-12 flex-col justify-center p-4">
