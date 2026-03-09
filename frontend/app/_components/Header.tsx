@@ -36,6 +36,7 @@ export function Header() {
     try {
       await signOut()
       await clear()
+      sessionStorage.clear() // Clear any state created from this session.
 
       toast.success("See you :)")
       router.refresh()

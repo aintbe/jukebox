@@ -1,24 +1,25 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
+import { STORAGE_KEY } from "../constants"
 
 export enum PlayerStatus {
   /**
-   * No request has been made to use this player.
+   * It is guaranteed that the error occurred and thus request cannot be made.
+   */
+  UNAVAILABLE = -1,
+  /**
+   * Player script is not loaded or
    */
   OFFLINE = 0,
   /**
-   * `PlayerEngine` is online and `PlayerStore` is initialized. You're now
+   * `PlayerScript` is online and `PlayerStore` is initialized. You're now
    * able to call `usePlayerStore` to use properties listed in `PlayerStoreInit`.
-   */
-  ONLINE,
-  /**
-   * Default set-ups are requested on the server side. Do not merge this status
-   * with `PlayerStatus.READY` because the server cannot ensure us if
-   * the set-up is actually finished if you're working with Spotify. Skip to
-   * the next status if you're working with other third-party services that
+   * Do not merge this status with `PlayerStatus.READY` because the backend server
+   * cannot assure us if it actually completed set-ups if you're working with Spotify.
+   * Skip to the next status if you're working with other third-party services that
    * ensures us what's happening.
    */
-  CONNECTING,
+  ONLINE,
   /**
    * Frontend is sure that the set-ups are done on the server side. Ready to play.
    */
@@ -83,6 +84,12 @@ export interface PlayerDevice {
 interface PlayerStore extends PlayerStoreInit {
   status: PlayerStatus
   setStatus: (status: PlayerStatus) => void
+  /**
+   * Preserved through one session so that user wouldn't need to
+   * request new connection every time they refresh.
+   */
+  isConnecting: boolean
+  connect: () => void
   jukeboxId: number | undefined
   setJukeboxId: (jukeboxId?: number) => void
   playback: Playback | undefined
@@ -92,7 +99,6 @@ interface PlayerStore extends PlayerStoreInit {
 }
 
 export interface PlayerStoreInit {
-  connect: () => Promise<void>
   togglePlay: () => Promise<void>
   playNext: () => Promise<void>
   playPrevious: () => Promise<void>
@@ -105,6 +111,15 @@ export const usePlayerStore = create<PlayerStore>()(
   immer(set => ({
     status: PlayerStatus.OFFLINE,
     setStatus: (status: PlayerStatus) => set({ status }),
+    isConnecting:
+      typeof window !== "undefined"
+        ? sessionStorage.getItem(STORAGE_KEY.CONNECT_REQUESTED) === "true"
+        : false,
+    connect: () => {
+      set({ isConnecting: true })
+      sessionStorage.setItem(STORAGE_KEY.CONNECT_REQUESTED, "true")
+      window.dispatchEvent(new Event(STORAGE_KEY.CONNECT_REQUESTED))
+    },
     jukeboxId: undefined,
     setJukeboxId: (jukeboxId?: number) => set({ jukeboxId }),
     playback: undefined,
@@ -116,7 +131,6 @@ export const usePlayerStore = create<PlayerStore>()(
     initialize: (actions: PlayerStoreInit) => set(actions),
 
     // Initialized by scripts calling `initialize`.
-    connect: async () => undefined,
     togglePlay: async () => undefined,
     playNext: async () => undefined,
     playPrevious: async () => undefined,

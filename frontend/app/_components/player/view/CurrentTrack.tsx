@@ -39,6 +39,7 @@ export function CurrentTrack({ isExpanded }: ExpandableProps) {
         </PossibleLink>
       </motion.div>
       <motion.div
+        layout
         className={cn("overflow-hidden", {
           "shrink grow": !isExpanded,
           "": isExpanded,

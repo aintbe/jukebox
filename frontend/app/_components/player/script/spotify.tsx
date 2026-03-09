@@ -4,12 +4,12 @@ import { memo, RefObject, useRef } from "react"
 import { useCallback, useEffect } from "react"
 import { UserProfile } from "@/types/api"
 import { useQueryClient } from "@tanstack/react-query"
-import { isHTTPError } from "ky"
 import Script from "next/script"
 import { toast } from "sonner"
 import { userProfileOptions } from "@/lib/api/hooks"
 import { getRelayHeaders, relayApi } from "@/lib/api/utils"
 import { getSession } from "@/lib/auth/actions"
+import { STORAGE_KEY } from "@/lib/constants"
 import {
   PlaybackAlbum,
   PlaybackTrack,
@@ -61,7 +61,11 @@ function SpotifyScript() {
   }, [queryClient])
 
   const handleReady = useCallback(() => {
+    console.log("remounted script!!") // TODO: remove this after testing.
+
     if (playerRef.current) return
+
+    console.log("remounted script!! no player; let's roll!")
 
     window.onSpotifyWebPlaybackSDKReady = () => {
       const player = new window.Spotify.Player({
@@ -77,7 +81,7 @@ function SpotifyScript() {
       addEventListeners(player, stateRef)
       player.connect().then(async (success: boolean) => {
         if (success) {
-          initialize(getPlayerStoreInit(player, stateRef))
+          initialize(getPlayerStoreInit(player))
           player.activateElement()
           playerRef.current = player
 
@@ -90,20 +94,46 @@ function SpotifyScript() {
       })
     }
 
+    // Script is loaded; now we can requset connection to Spotify player!
+    setStatus(PlayerStatus.OFFLINE)
+
     // If the component is remounted after the script has already loaded,
     // the SDK won't call the function again, so we call it manually here.
-    if (window.Spotify) {
+    const isConnecting = usePlayerStore.getState().isConnecting
+    if (isConnecting && window.Spotify) {
       window.onSpotifyWebPlaybackSDKReady()
     }
-  }, [getToken, initialize])
+  }, [getToken, initialize, setStatus])
 
+  // Listen to connect event if connection is not requested yet.
+  // Otherwise, `handleReady` will automatically handle the request on mount,
+  // so window does not need to listen to connection request events.
+  useEffect(() => {
+    const isConnecting = usePlayerStore.getState().isConnecting
+    if (isConnecting) return
+
+    const connectionHandler = () => {
+      window.onSpotifyWebPlaybackSDKReady()
+    }
+
+    window.addEventListener(STORAGE_KEY.CONNECT_REQUESTED, connectionHandler, {
+      once: true,
+    })
+    return () => {
+      window.removeEventListener(
+        STORAGE_KEY.CONNECT_REQUESTED,
+        connectionHandler,
+      )
+    }
+  }, [])
+
+  // Clean up connected Spotify player on unmount.
   useEffect(() => {
     return () => {
       if (playerRef.current) {
         console.debug("Disconnecting Spotify player...")
         playerRef.current?.disconnect()
-        stateRef.current = {}
-        setStatus(PlayerStatus.OFFLINE)
+        setStatus(PlayerStatus.UNAVAILABLE)
       }
     }
   }, [setStatus])
@@ -132,18 +162,30 @@ const addEventListeners = (
   // Setters never change after store creation and won't trigger stale closure issues.
   const { setStatus, setPlayback } = usePlayerStore.getState()
 
+  const tryConnect = async (_deviceId?: string) => {
+    const deviceId = _deviceId ?? stateRef.current.deviceId
+    if (!deviceId) {
+      console.error("Spotify returned invalid deviceId:", deviceId)
+      return
+    }
+
+    // NOTE: It's okay to directly call relay server here, since `getToken` assures
+    //    that spotify access token is valid while Spotify.Player instance is alive.
+    //    Also, No need to wait since the server returns 202 Accepted even on success.
+    relayApi
+      .put("spotify/connect", {
+        json: { deviceId },
+        headers: stateRef.current.headers,
+      })
+      .catch(e => console.error("Failed to connect jukebox:", e))
+    usePlayerStore.setState({ status: PlayerStatus.ONLINE })
+  }
+
   player.addListener(
     "ready",
     async ({ device_id: deviceId }: Spotify.WebPlaybackInstance) => {
-      try {
-        stateRef.current.deviceId = deviceId
-        setStatus(PlayerStatus.ONLINE)
-      } catch (error) {
-        if (isHTTPError(error)) {
-          console.debug("Failed to check current connection:", error)
-          setStatus(PlayerStatus.ONLINE)
-        }
-      }
+      tryConnect(deviceId)
+      stateRef.current.deviceId = deviceId
     },
   )
 
@@ -152,7 +194,7 @@ const addEventListeners = (
     ({ device_id: deviceId }: Spotify.WebPlaybackInstance) => {
       console.debug("not ready")
       stateRef.current.deviceId = deviceId
-      setStatus(PlayerStatus.OFFLINE)
+      setStatus(PlayerStatus.UNAVAILABLE)
     },
   )
 
@@ -162,11 +204,11 @@ const addEventListeners = (
       const { status, setStatus } = usePlayerStore.getState()
       if (state === null) {
         // TODO: do something
-        setStatus(PlayerStatus.OFFLINE)
+        setStatus(PlayerStatus.UNAVAILABLE)
         return
       }
       // We can now guarantee that this player is fully ready to play.
-      if (status === PlayerStatus.CONNECTING) {
+      if (status === PlayerStatus.ONLINE) {
         setStatus(PlayerStatus.READY)
       }
 
@@ -200,9 +242,9 @@ const addEventListeners = (
   })
 
   player.on("playback_error", ({ message }) => {
-    const { status, connect } = usePlayerStore.getState()
-    if (status == PlayerStatus.CONNECTING) {
-      connect()
+    const { status } = usePlayerStore.getState()
+    if (status == PlayerStatus.ONLINE) {
+      tryConnect()
       toast.error(
         "Server is still trying to connect to Spotify... Please try again later.",
       )
@@ -213,10 +255,7 @@ const addEventListeners = (
   })
 }
 
-const getPlayerStoreInit = (
-  player: Spotify.Player,
-  stateRef: RefObject<SpotifyState>,
-): PlayerStoreInit => {
+const getPlayerStoreInit = (player: Spotify.Player): PlayerStoreInit => {
   const setPlayerVolume = async (volume: number) => {
     await player.setVolume(volume)
     return await player.getVolume()
@@ -239,29 +278,6 @@ const getPlayerStoreInit = (
   }
 
   return {
-    connect: async () => {
-      const deviceId = stateRef.current.deviceId
-      if (!deviceId) {
-        console.error(
-          `One of following are missing in PlayerStore. (deviceId=${deviceId})`,
-        )
-        return
-      }
-
-      // No need to wait since the server returns 202 Accepted even on success.
-      usePlayerStore.setState({ status: PlayerStatus.CONNECTING })
-      try {
-        // NOTE: It's okay to directly call relay server here, since `getToken` assures
-        //    that spotify access token is valid while Spotify.Player instance is alive.
-        await relayApi.put("spotify/connect", {
-          json: { deviceId },
-          headers: stateRef.current.headers,
-        })
-      } catch (e) {
-        console.error("Failed to connect jukebox:", e)
-      }
-    },
-
     togglePlay: () => player.togglePlay(),
 
     playNext: () => player.nextTrack(),
