@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import type { Metadata } from "next"
 import { Geist } from "next/font/google"
 import { Toaster } from "sonner"
@@ -33,7 +34,9 @@ export default async function RootLayout({
         <Providers session={session}>
           <Header />
           <main>{children}</main>
-          <Player />
+          <Suspense fallback={null}>
+            <Player />
+          </Suspense>
         </Providers>
       </body>
     </html>
