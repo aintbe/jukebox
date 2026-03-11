@@ -3,9 +3,18 @@ endpoint:
     domain: ${FRONTEND_DOMAIN}
     o-auth2-sign-in: /sign-in/streaming-service
     o-auth2-callback: /sign-in/callback
-  relay:
-    domain: http://localhost:${RELAY_SERVER_PORT}
+  api:
+    name: api
+    label: API Server
+    domain: http://localhost:${API_SERVER_PORT}
   spotify:
     name: spotify
     label: Spotify
     domain: https://api.spotify.com/v1
+    max-idle-time: 50
+
+spring:
+  data:
+    redis:
+      host: localhost
+      port: ${REDIS_PORT}

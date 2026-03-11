@@ -50,11 +50,6 @@ spring:
         hibernate:
           format_sql: true
           highlight_sql: true
-  
-  data:
-    redis:
-      host: localhost
-      port: ${REDIS_PORT}
 
 logging:
   level:
