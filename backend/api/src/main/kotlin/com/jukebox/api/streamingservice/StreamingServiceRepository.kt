@@ -6,7 +6,9 @@ import com.jukebox.api.user.entity.User
 import com.linecorp.kotlinjdsl.support.spring.data.jpa.repository.KotlinJdslJpqlExecutor
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
 
+@Repository
 interface StreamingServiceRepository :
     JpaRepository<StreamingService, Int>,
     KotlinJdslJpqlExecutor {
