@@ -4,7 +4,7 @@ import com.jukebox.api.jukebox.entity.Jukebox
 import com.jukebox.api.streamingservice.entity.StreamingService
 import com.jukebox.api.streamingservice.entity.StreamingServiceUser
 import com.jukebox.api.streamingservice.entity.StreamingServiceUserPK
-import com.jukebox.api.user.dto.UserQueryDto
+import com.jukebox.api.user.dto.UserInfo
 import com.jukebox.api.user.entity.User
 import com.linecorp.kotlinjdsl.support.spring.data.jpa.repository.KotlinJdslJpqlExecutor
 import org.springframework.data.jpa.repository.JpaRepository
@@ -31,9 +31,9 @@ interface UserRepository :
                 )
         }.firstOrNull()
 
-    fun findUserProfile(id: Long): UserQueryDto.UserProfile? =
+    fun findUserProfile(id: Long): UserInfo.UserProfile? =
         findAll {
-            selectNew<UserQueryDto.UserProfile>(
+            selectNew<UserInfo.UserProfile>(
                 path(User::id),
                 path(User::username),
                 path(StreamingService::name),

@@ -1,12 +1,10 @@
 package com.jukebox.api.auth.dto
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.jukebox.api.user.entity.User
 import io.jsonwebtoken.Claims
 import java.security.Principal
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
-class AuthUser(
+data class AuthUser(
     val userId: Long,
     val username: String,
     val authorities: List<UserRole>,

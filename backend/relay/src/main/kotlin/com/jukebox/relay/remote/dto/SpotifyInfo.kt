@@ -1,10 +1,9 @@
-package com.jukebox.relay.spotify.dto
+package com.jukebox.relay.remote.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import jakarta.validation.constraints.NotBlank
 
-class SpotifyDto {
+class SpotifyInfo {
     data class ErrorResponse(
         val error: Error,
     ) {
@@ -32,8 +31,7 @@ class SpotifyDto {
         val deviceId: String?,
     )
 
-    data class TransferRequest(
-        @field:NotBlank
+    data class Transfer(
         val deviceId: String,
     ) {
         fun toBody() =

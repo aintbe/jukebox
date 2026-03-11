@@ -1,11 +1,11 @@
 package com.jukebox.api.user.dto
 
-class UserQueryDto {
-    data class UserProfile(
+class UserInfo {
+    class UserProfile private constructor(
         val id: Long,
         val username: String,
         val streamingServiceName: String?,
-        val jukebox: JukeboxDetail?,
+        val jukebox: Jukebox?,
     ) {
         constructor(
             id: Long,
@@ -21,13 +21,13 @@ class UserQueryDto {
                 if (jukeboxHandle.isNullOrBlank()) {
                     null
                 } else {
-                    JukeboxDetail(id, jukeboxHandle)
+                    Jukebox(id, jukeboxHandle)
                 }
             },
         )
     }
 
-    data class JukeboxDetail(
+    data class Jukebox(
         val id: Long,
         val handle: String,
     )

@@ -2,6 +2,7 @@ package com.jukebox.api.user
 
 import com.jukebox.api.auth.dto.AuthUser
 import com.jukebox.api.user.dto.UserDto
+import com.jukebox.api.user.dto.toResponse
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
@@ -28,7 +29,7 @@ class UserController(
      * refresh token during the injection process, thus ensuring
      * that the retrieved access token is always valid.
      *
-     * @return A [UserDto.UserProfileResponse] containing the user profile
+     * @return A [UserDto.GetProfileResponse] containing the user profile
      * and the (potentially) streaming service access information.
      */
     @GetMapping()
@@ -36,9 +37,9 @@ class UserController(
         @AuthenticationPrincipal user: AuthUser,
         // This automatically reissues access token if current one's expired.
         @RegisteredOAuth2AuthorizedClient("spotify") authorizedClient: OAuth2AuthorizedClient?,
-    ): UserDto.UserProfileResponse? {
+    ): UserDto.GetProfileResponse? {
         val profile = userService.getUserProfile(user.userId)
         val accessToken = authorizedClient?.accessToken
-        return UserDto.UserProfileResponse(profile, accessToken)
+        return profile.toResponse(accessToken)
     }
 }
