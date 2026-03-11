@@ -1,4 +1,5 @@
 export * from "./api"
 export * from "./app"
-export * from "./dsp"
+export * from "./streaming-service"
 export * from "./time"
+export * from "./websocket"

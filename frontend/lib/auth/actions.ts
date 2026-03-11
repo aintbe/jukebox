@@ -65,10 +65,10 @@ export const signOut = async () => {
  *
  * @param code Authorization code returned via callback query params.
  */
-export async function issue(code: string | null): Promise<boolean> {
-  if (!code) return false
+export async function issue(ticket: string | null): Promise<boolean> {
+  if (!ticket) return false
   try {
-    const res = await publicApi.post("auth/issue", { json: { code } })
+    const res = await publicApi.post("auth/issue", { json: { ticket } })
 
     const accessToken = extractAccessToken(res.headers)
     const session = accessToken ? parseAccessToken(accessToken) : undefined

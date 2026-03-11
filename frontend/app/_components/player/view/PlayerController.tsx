@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { Pause, Play, SkipBack, SkipForward } from "lucide-react"
 import { usePlayerStore } from "@/lib/stores/player"
+import { usePlayerActionsStore } from "@/lib/stores/player-actions"
 import { cn } from "@/lib/utils"
 import { ExpandableProps } from "@/components/AnchoredDrawer"
 import { IconButton } from "@/components/IconButton"
@@ -10,13 +11,13 @@ import { VolumeSlider } from "./VolumeSlider"
 
 export function PlayerController({ isExpanded }: ExpandableProps) {
   const isPlaying = usePlayerStore(state => state.playback?.isPlaying)
-  const playPrevious = usePlayerStore(state => state.playPrevious)
-  const togglePlay = usePlayerStore(state => state.togglePlay)
-  const playNext = usePlayerStore(state => state.playNext)
+  const playPrevious = usePlayerActionsStore(state => state.playPrevious)
+  const togglePlay = usePlayerActionsStore(state => state.togglePlay)
+  const playNext = usePlayerActionsStore(state => state.playNext)
 
   const handleClick = () => {
     // TODO: rate limit needed
-    console.log("clicked!")
+    console.log("todo: clicked!")
   }
 
   return (

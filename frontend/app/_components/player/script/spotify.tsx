@@ -1,36 +1,71 @@
 "use client"
 
-import { memo, RefObject, useRef } from "react"
+import { memo, useRef } from "react"
 import { useCallback, useEffect } from "react"
 import { UserProfile } from "@/types/api"
 import { useQueryClient } from "@tanstack/react-query"
 import Script from "next/script"
 import { toast } from "sonner"
 import { userProfileOptions } from "@/lib/api/hooks"
-import { getRelayHeaders, relayApi } from "@/lib/api/utils"
 import { getSession } from "@/lib/auth/actions"
-import { STORAGE_KEY } from "@/lib/constants"
+import { WEBSOCKET_EVENT } from "@/lib/constants"
 import {
   PlaybackAlbum,
   PlaybackTrack,
   PlayerStatus,
   usePlayerStore,
-  type PlayerStoreInit,
 } from "@/lib/stores/player"
+import {
+  PlayerActions,
+  usePlayerActionsStore,
+} from "@/lib/stores/player-actions"
 
 interface SpotifyState {
   deviceId?: string
-  headers?: Record<string, string>
+  mounted: boolean
 }
 
 function SpotifyScript() {
-  const queryClient = useQueryClient()
-  const initialize = usePlayerStore(state => state.initialize)
-  const setStatus = usePlayerStore(state => state.setStatus)
-
   // State that are only defined & used in the context of Spotify SDK.
   const playerRef = useRef<Spotify.Player>(undefined)
-  const stateRef = useRef<SpotifyState>({})
+  const stateRef = useRef<SpotifyState>({ mounted: false })
+
+  const queryClient = useQueryClient()
+  const setStatus = usePlayerStore(state => state.setStatus)
+  const setActions = usePlayerActionsStore(state => state.setActions)
+  const send = usePlayerActionsStore(state => state.send)
+
+  // `deviceId` only exists when Spotify fires "ready", and `send`
+  // only works after websocket has been connected. Since we can't be
+  // sure which event fires first, add `tryConnect` to both events.
+  const tryConnect = useCallback(
+    async (_deviceId?: string) => {
+      const deviceId = _deviceId ?? stateRef.current.deviceId
+      if (!deviceId) return
+
+      const isConnected = usePlayerActionsStore.getState().isConnected
+      if (isConnected) {
+        send({ event: WEBSOCKET_EVENT.OUT.SPOTIFY_TRANSFER_DEVICE, deviceId })
+        setStatus(PlayerStatus.ONLINE)
+      }
+
+      stateRef.current.deviceId = deviceId
+    },
+    [send, setStatus],
+  )
+
+  useEffect(() => {
+    const unsubscribe = usePlayerActionsStore.subscribe(
+      state => state.isConnected,
+      (isConnected: boolean) => {
+        if (isConnected) {
+          tryConnect()
+          unsubscribe()
+        }
+      },
+    )
+    return () => unsubscribe()
+  }, [tryConnect])
 
   const getToken = useCallback(async (): Promise<string | undefined> => {
     const session = await getSession()
@@ -47,25 +82,22 @@ function SpotifyScript() {
       (cachedAccess.expiresAt == null ||
         new Date(cachedAccess.expiresAt) >= new Date())
     ) {
-      // Update state ref in case we need it for reconnection
-      stateRef.current.headers = getRelayHeaders(cachedData)
       return cachedAccess.token
     }
 
     // Fetch new token from API server and update useQuery cache.
     console.debug("Token is missing or expired. Reissuing token...")
     const data = await queryClient.fetchQuery(options)
-    stateRef.current.headers = getRelayHeaders(data)
 
     return data?.streamingAccess?.token
   }, [queryClient])
 
   const handleReady = useCallback(() => {
-    console.log("remounted script!!") // TODO: remove this after testing.
+    console.log("todo: remounted script!!") // TODO: remove this after testing.
 
     if (playerRef.current) return
 
-    console.log("remounted script!! no player; let's roll!")
+    console.log("todo: remounted script!! no player; let's roll!")
 
     window.onSpotifyWebPlaybackSDKReady = () => {
       const player = new window.Spotify.Player({
@@ -78,10 +110,10 @@ function SpotifyScript() {
         volume: usePlayerStore.getState().device.volume,
       })
 
-      addEventListeners(player, stateRef)
+      addEventListeners(player, tryConnect)
       player.connect().then(async (success: boolean) => {
         if (success) {
-          initialize(getPlayerStoreInit(player))
+          setActions(getPlayerActions(player))
           player.activateElement()
           playerRef.current = player
 
@@ -103,29 +135,20 @@ function SpotifyScript() {
     if (isConnecting && window.Spotify) {
       window.onSpotifyWebPlaybackSDKReady()
     }
-  }, [getToken, initialize, setStatus])
 
-  // Listen to connect event if connection is not requested yet.
-  // Otherwise, `handleReady` will automatically handle the request on mount,
-  // so window does not need to listen to connection request events.
+    stateRef.current.mounted = true
+  }, [getToken, setActions, setStatus, tryConnect])
+
+  console.log("todo: spotify rerender")
+
+  // `handleReady` will automatically handle the requests on mount,
+  // so this hook only have to take care of updates on re-render.
+  const isConnecting = usePlayerStore(state => state.isConnecting)
   useEffect(() => {
-    const isConnecting = usePlayerStore.getState().isConnecting
-    if (isConnecting) return
-
-    const connectionHandler = () => {
+    if (isConnecting && stateRef.current.mounted) {
       window.onSpotifyWebPlaybackSDKReady()
     }
-
-    window.addEventListener(STORAGE_KEY.CONNECT_REQUESTED, connectionHandler, {
-      once: true,
-    })
-    return () => {
-      window.removeEventListener(
-        STORAGE_KEY.CONNECT_REQUESTED,
-        connectionHandler,
-      )
-    }
-  }, [])
+  }, [isConnecting])
 
   // Clean up connected Spotify player on unmount.
   useEffect(() => {
@@ -157,51 +180,27 @@ export interface SpotifyConnection {
 
 const addEventListeners = (
   player: Spotify.Player,
-  stateRef: RefObject<SpotifyState>,
+  tryConnect: (deviceId?: string) => Promise<void>,
 ) => {
-  // Setters never change after store creation and won't trigger stale closure issues.
-  const { setStatus, setPlayback } = usePlayerStore.getState()
-
-  const tryConnect = async (_deviceId?: string) => {
-    const deviceId = _deviceId ?? stateRef.current.deviceId
-    if (!deviceId) {
-      console.error("Spotify returned invalid deviceId:", deviceId)
-      return
-    }
-
-    // NOTE: It's okay to directly call relay server here, since `getToken` assures
-    //    that spotify access token is valid while Spotify.Player instance is alive.
-    //    Also, No need to wait since the server returns 202 Accepted even on success.
-    relayApi
-      .put("spotify/connect", {
-        json: { deviceId },
-        headers: stateRef.current.headers,
-      })
-      .catch(e => console.error("Failed to connect jukebox:", e))
-    usePlayerStore.setState({ status: PlayerStatus.ONLINE })
-  }
-
   player.addListener(
     "ready",
     async ({ device_id: deviceId }: Spotify.WebPlaybackInstance) => {
       tryConnect(deviceId)
-      stateRef.current.deviceId = deviceId
     },
   )
 
   player.addListener(
     "not_ready",
     ({ device_id: deviceId }: Spotify.WebPlaybackInstance) => {
-      console.debug("not ready")
-      stateRef.current.deviceId = deviceId
-      setStatus(PlayerStatus.UNAVAILABLE)
+      console.debug("not ready", deviceId)
+      usePlayerStore.setState({ status: PlayerStatus.UNAVAILABLE })
     },
   )
 
   player.addListener(
     "player_state_changed",
     async (state: Spotify.PlaybackState) => {
-      const { status, setStatus } = usePlayerStore.getState()
+      const { status, setStatus, setPlayback } = usePlayerStore.getState()
       if (state === null) {
         // TODO: do something
         setStatus(PlayerStatus.UNAVAILABLE)
@@ -244,7 +243,6 @@ const addEventListeners = (
   player.on("playback_error", ({ message }) => {
     const { status } = usePlayerStore.getState()
     if (status == PlayerStatus.ONLINE) {
-      tryConnect()
       toast.error(
         "Server is still trying to connect to Spotify... Please try again later.",
       )
@@ -255,7 +253,7 @@ const addEventListeners = (
   })
 }
 
-const getPlayerStoreInit = (player: Spotify.Player): PlayerStoreInit => {
+const getPlayerActions = (player: Spotify.Player): PlayerActions => {
   const setPlayerVolume = async (volume: number) => {
     await player.setVolume(volume)
     return await player.getVolume()

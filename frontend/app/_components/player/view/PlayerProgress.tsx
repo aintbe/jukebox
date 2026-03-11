@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
 import { MIN_IN_SEC, SEC_IN_MS } from "@/lib/constants"
 import { usePlayerStore } from "@/lib/stores/player"
+import { usePlayerActionsStore } from "@/lib/stores/player-actions"
 import { ProgressSlider } from "@/components/ProgressSlider"
 
 interface Props {
@@ -51,8 +52,8 @@ export function PlayerProgress({
     }
   }, [state])
 
-  const playAt = usePlayerStore(state => state.playAt)
-  const togglePlay = usePlayerStore(state => state.togglePlay)
+  const playAt = usePlayerActionsStore(state => state.playAt)
+  const togglePlay = usePlayerActionsStore(state => state.togglePlay)
 
   const handleValueChange = (position: number) => {
     playAt(position)

@@ -1,5 +1,4 @@
 import "server-only"
-
 import { getServerSession } from "../auth/server"
 import { createAuthApi } from "./utils"
 

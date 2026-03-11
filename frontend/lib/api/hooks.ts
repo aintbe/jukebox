@@ -1,6 +1,7 @@
-import { ApiData, UserProfile } from "@/types/api"
+import { ApiData, Ticket, UserProfile } from "@/types/api"
 import { ExposedSession } from "@/types/app"
 import { useQuery } from "@tanstack/react-query"
+import { SEC_IN_MS } from "../constants"
 import { usePlayerStore } from "../stores/player"
 import { api } from "./client"
 
@@ -20,3 +21,22 @@ export const userProfileOptions = (session?: ExposedSession) => ({
 
 export const useUserProfile = (session?: ExposedSession) =>
   useQuery(userProfileOptions(session))
+
+export const useWebsocketTicket = (
+  handle: string | undefined,
+  isConnecting: boolean,
+) =>
+  useQuery({
+    queryKey: ["websocket", "ticket", handle],
+    queryFn: async () => {
+      if (!handle) return null
+      const data: ApiData<Ticket> = await api
+        .post(`jukebox/${handle}/join`)
+        .json()
+      return data?.data.ticket
+    },
+    staleTime: 30 * SEC_IN_MS,
+    gcTime: 30 * SEC_IN_MS,
+    retry: 1,
+    enabled: isConnecting,
+  })

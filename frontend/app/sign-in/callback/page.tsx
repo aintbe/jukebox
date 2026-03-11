@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { issue } from "@/lib/auth/actions"
+import { STORAGE_KEY } from "@/lib/constants"
 import { useSession } from "@/lib/providers"
 
-export const REDIRECT_PATH_KEY = "redirect-to-after-sign-in"
 export const DEFAULT_REDIRECT_PATH = "/"
 
 export default function SignInCallbackPage() {
@@ -35,8 +35,8 @@ const useSignIn = () => {
     hasProcessed.current = true
 
     const signIn = async (): Promise<string | undefined> => {
-      const code = searchParams.get("code")
-      const signedIn = await issue(code)
+      const ticket = searchParams.get("ticket")
+      const signedIn = await issue(ticket)
       await refresh()
 
       if (!signedIn) {
@@ -45,8 +45,8 @@ const useSignIn = () => {
       }
       toast.success("Welcome!")
 
-      const redirectPath = sessionStorage.getItem(REDIRECT_PATH_KEY)
-      sessionStorage.removeItem(REDIRECT_PATH_KEY)
+      const redirectPath = sessionStorage.getItem(STORAGE_KEY.REDIRECT_PATH)
+      sessionStorage.removeItem(STORAGE_KEY.REDIRECT_PATH)
 
       return redirectPath ?? undefined
     }
