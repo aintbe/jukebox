@@ -7,15 +7,9 @@ open class ForbiddenException(
     reason: String,
 ) : BusinessException(HttpStatus.FORBIDDEN, errorCode, reason)
 
-class StreamingServiceNotFoundException :
-    ForbiddenException(
-        errorCode = "STREAMING_SERVICE_NOT_FOUND",
-        reason = "This account is not connected to any streaming service.",
-    )
-
 class StreamingServiceAuthRequiredException(
-    serviceName: String,
+    userId: Long,
 ) : ForbiddenException(
         errorCode = "STREAMING_SERVICE_AUTHENTICATION_REQUIRED",
-        reason = "$serviceName requires re-authentication.",
+        reason = "User $userId requires re-authentication.",
     )
