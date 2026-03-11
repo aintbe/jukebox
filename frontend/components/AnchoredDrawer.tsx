@@ -1,8 +1,8 @@
 "use client"
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
+import { AnimatePresence, motion } from "framer-motion"
 import { cn, getTwSpacing } from "@/lib/utils"
-import { DialogOverlay } from "@/components/ui/dialog"
 import {
   Drawer,
   DrawerContent,
@@ -32,20 +32,11 @@ export function AnchoredDrawer({
   const [snap, setSnap] = useState<string | number | null>(
     snapPoints.at(0) ?? null,
   )
-  const overlayRef = useRef<HTMLDivElement>(null)
 
   const isExpanded = useMemo(
     () => snap === expandedSnapPoint,
     [expandedSnapPoint, snap],
   )
-  useLayoutEffect(() => {
-    const overlay = overlayRef.current
-    if (!overlay) return
-
-    // Show interaction with other parts of window only if the drawer is expanded.
-    overlay.style.opacity = isExpanded ? "1" : "0"
-    overlay.style.pointerEvents = isExpanded ? "auto" : "none"
-  }, [isExpanded])
 
   return (
     <Drawer
@@ -57,14 +48,23 @@ export function AnchoredDrawer({
       setActiveSnapPoint={setSnap}
     >
       <DrawerPortal>
-        <DialogOverlay
-          ref={overlayRef}
-          className={cn("opacity-0 transition-all duration-500", {
-            "pointer-events-none!": !isExpanded,
-          })}
-        />
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              layout={false}
+              aria-hidden
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80"
+            />
+          )}
+        </AnimatePresence>
         <DrawerContent
-          className={cn("top-0", className)}
+          className={cn(
+            "dark:bg-primary dark:text-primary-foreground top-0",
+            className,
+          )}
           style={{
             marginTop: `calc(${MARGIN_TOP})`,
             height: `calc(${typeof snap === "number" ? `${snap * 100}%` : (snap ?? "0%")} - ${MARGIN_TOP})`,

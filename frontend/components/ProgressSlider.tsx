@@ -63,14 +63,17 @@ const ProgressSlider = React.forwardRef<
         <ProgressPrimitive.Root
           {...props}
           ref={ref}
-          className={cn("bg-muted relative z-3 overflow-hidden rounded-full", {
-            "h-2 w-full": !vertical,
-            "h-full w-2": vertical,
-          })}
+          className={cn(
+            "bg-muted/30 dark:bg-muted-foreground/30 relative z-3 overflow-hidden rounded-full",
+            {
+              "h-2 w-full": !vertical,
+              "h-full w-2": vertical,
+            },
+          )}
           max={max}
         >
           <ProgressPrimitive.Indicator
-            className="bg-primary h-full w-full flex-1 rounded transition-all"
+            className="bg-primary dark:bg-primary-foreground h-full w-full flex-1 rounded transition-all"
             style={{
               transform: vertical
                 ? `translateY(${100 - percent}%)`
@@ -78,7 +81,7 @@ const ProgressSlider = React.forwardRef<
             }}
           />
           <div
-            className={cn("absolute bg-gray-500", {
+            className={cn("bg-muted dark:bg-muted-foreground absolute", {
               "top-0 left-0 h-full": !vertical,
               "bottom-0 left-0 w-full": vertical,
             })}
@@ -104,7 +107,10 @@ const ProgressSlider = React.forwardRef<
                 }}
               />
             </TooltipTrigger>
-            <TooltipContent side="bottom">
+            <TooltipContent
+              side="bottom"
+              className="dark:bg-background dark:text-foreground"
+            >
               {tooltipContent?.((hoveredPercent * max) / 100)}
             </TooltipContent>
           </Tooltip>

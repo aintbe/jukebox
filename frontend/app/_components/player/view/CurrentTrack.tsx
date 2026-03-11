@@ -42,7 +42,6 @@ export function CurrentTrack({ isExpanded }: ExpandableProps) {
         layout
         className={cn("overflow-hidden", {
           "shrink grow": !isExpanded,
-          "": isExpanded,
         })}
       >
         <MarqueeText
@@ -50,7 +49,7 @@ export function CurrentTrack({ isExpanded }: ExpandableProps) {
           className="font-semibold"
           speed={30}
         />
-        <p className="truncate whitespace-nowrap text-gray-400">
+        <p className="text-muted-foreground truncate whitespace-nowrap">
           {track
             ? renderArtists(track.artists)
             : renderArtists(placeholderTrack.artists)}
