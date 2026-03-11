@@ -1,9 +1,9 @@
 package com.jukebox.core.properties
 
 data class EndpointProperties(
-    val frontend: FrontendServerConfig,
-    val relay: ServerConfig,
-    val spotify: StreamingServerConfig,
+    val frontend: FrontendConfig,
+    val api: RemoteConfig,
+    val spotify: RemoteConfig,
 ) {
     val oAuth2SignInUrl = combine(frontend.domain, frontend.oAuth2SignIn)
     val oAuth2CallbackUrl = combine(frontend.domain, frontend.oAuth2Callback)
@@ -13,18 +13,15 @@ data class EndpointProperties(
             .joinToString("/") { it.trim().removePrefix("/").removeSuffix("/") }
 }
 
-data class FrontendServerConfig(
+data class FrontendConfig(
     val domain: String,
     val oAuth2SignIn: String,
     val oAuth2Callback: String,
 )
 
-data class ServerConfig(
-    val domain: String,
-)
-
-data class StreamingServerConfig(
+data class RemoteConfig(
     val name: String,
     val label: String,
     val domain: String,
+    val maxIdleTime: Long? = null,
 )

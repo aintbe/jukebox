@@ -1,10 +1,10 @@
-package com.jukebox.relay.spotify
+package com.jukebox.relay.remote
 
 import com.jukebox.core.dto.RequestContext
 import com.jukebox.core.exception.ExternalException
 import com.jukebox.core.properties.EndpointProperties
-import com.jukebox.relay.common.web.StreamingClientService
-import com.jukebox.relay.spotify.dto.SpotifyDto
+import com.jukebox.relay.remote.dto.SpotifyInfo
+import com.jukebox.relay.remote.web.RemoteClientService
 import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
@@ -18,10 +18,10 @@ import reactor.core.publisher.Mono
 @Service
 class SpotifyService(
     endpointProperties: EndpointProperties,
-) : StreamingClientService(serviceConfig = endpointProperties.spotify) {
+) : RemoteClientService(config = endpointProperties.spotify) {
     override fun extractErrorMessage(response: ClientResponse): Mono<String> =
         response
-            .bodyToMono(SpotifyDto.ErrorResponse::class.java)
+            .bodyToMono(SpotifyInfo.ErrorResponse::class.java)
             .map { it.error.message }
 
     /**
@@ -29,13 +29,13 @@ class SpotifyService(
      *
      * cf. https://developer.spotify.com/documentation/web-api/reference/get-information-about-the-users-current-playback
      */
-    private suspend fun getPlaybackState(context: RequestContext): ResponseEntity<SpotifyDto.PlaybackStateResponse> =
+    private suspend fun getPlaybackState(context: RequestContext): ResponseEntity<SpotifyInfo.PlaybackStateResponse> =
         client
             .request(
                 method = HttpMethod.GET,
                 uri = "/me/player",
                 token = context.streamingAccess.token,
-            ).awaitEntity<SpotifyDto.PlaybackStateResponse>()
+            ).awaitEntity<SpotifyInfo.PlaybackStateResponse>()
 
     /**
      * [Spotify Web API] Transfer playback to a new device and optionally begin playback.
@@ -43,18 +43,20 @@ class SpotifyService(
      * cf. https://developer.spotify.com/documentation/web-api/reference/transfer-a-users-playback
      */
     suspend fun transferPlayback(
-        context: RequestContext,
-        request: SpotifyDto.TransferRequest,
+        jukeboxId: Long,
+        token: String,
+        deviceId: String,
     ) {
+        val body = mapOf("device_ids" to listOf(deviceId), "play" to false)
         client
             .request(
                 method = HttpMethod.PUT,
                 uri = "/me/player",
-                token = context.streamingAccess.token,
-                body = request.toBody(),
+                token = token,
+                body = body,
             ).onStatus({ it.isSameCodeAs(HttpStatus.NOT_FOUND) }) {
-                log.error("Spotify returned invalid device id ${request.deviceId}. (jukeboxId=${context.jukeboxId})")
-                Mono.error(ExternalException(serviceLabel))
+                log.error("Spotify returned invalid device id $deviceId. (jukeboxId=$jukeboxId)")
+                Mono.error(ExternalException(remoteServerLabel))
             }.toBodilessEntity() // no need to check response body
             .awaitSingle()
     }
@@ -70,7 +72,7 @@ class SpotifyService(
                     method = HttpMethod.GET,
                     uri = "/me/player/devices",
                     token = context.streamingAccess.token,
-                ).awaitBodyOrNull<SpotifyDto.DeviceResponse>()
+                ).awaitBodyOrNull<SpotifyInfo.DeviceResponse>()
 
         return response?.devices?.find { it.isActive }?.id
     }
