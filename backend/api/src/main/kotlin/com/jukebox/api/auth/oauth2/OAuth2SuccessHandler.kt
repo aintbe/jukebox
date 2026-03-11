@@ -2,6 +2,8 @@ package com.jukebox.api.auth.oauth2
 
 import com.jukebox.api.auth.dto.OAuth2Principal
 import com.jukebox.api.auth.jwt.TokenProvider
+import com.jukebox.api.common.cache.Cache
+import com.jukebox.api.common.cache.CacheService
 import com.jukebox.core.properties.EndpointProperties
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -16,6 +18,7 @@ class OAuth2SuccessHandler(
     private val failureHandler: OAuth2FailureHandler,
     private val tokenProvider: TokenProvider,
     private val endpointProperties: EndpointProperties,
+    private val cacheService: CacheService,
 ) : SimpleUrlAuthenticationSuccessHandler() {
     override fun onAuthenticationSuccess(
         request: HttpServletRequest,
@@ -32,13 +35,15 @@ class OAuth2SuccessHandler(
             )
         }
 
-        val code = tokenProvider.generateAuthCode(user)
+        val ticket = tokenProvider.generateRandomToken()
+        cacheService.put(Cache.AuthUserToIssue(ticket), user)
+
         val url =
             UriComponentsBuilder
                 .fromUriString(endpointProperties.oAuth2CallbackUrl)
                 // Response header is not relayed after redirection;
                 // we need to use query params to maintain it.
-                .queryParam("code", code)
+                .queryParam("ticket", ticket)
                 .build()
                 .toUriString()
         redirectStrategy.sendRedirect(request, response, url)

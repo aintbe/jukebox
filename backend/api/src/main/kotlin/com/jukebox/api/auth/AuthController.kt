@@ -41,7 +41,7 @@ class AuthController(
     fun issue(
         @RequestBody request: AuthDto.IssueRequest,
     ): ResponseEntity<Unit> {
-        val tokens = authService.issueTokens(request.code)
+        val tokens = authService.issueTokens(request.ticket)
         val cookie = tokenHttpHandler.createRefreshCookie(tokens.refreshToken)
         return ResponseEntity
             .ok()
