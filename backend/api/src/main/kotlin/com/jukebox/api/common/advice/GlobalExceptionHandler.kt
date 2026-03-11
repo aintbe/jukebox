@@ -1,5 +1,7 @@
 package com.jukebox.api.common.advice
 
+import com.jukebox.core.dto.ErrorResponse
+import com.jukebox.core.dto.GlobalResponse
 import com.jukebox.core.exception.BindingException
 import com.jukebox.core.exception.BusinessException
 import com.jukebox.core.exception.InternalException
@@ -7,6 +9,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.ServletRequestBindingException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -34,7 +37,7 @@ class GlobalExceptionHandler {
         handleBusinessException(BindingException(e.message ?: "Failed to bind request to controller."))
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun handleNotFoundException(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> =
+    fun handleNotReadableException(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> =
         ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(GlobalResponse.error("CANNOT_READ_BODY", e.message ?: ""))
@@ -44,4 +47,10 @@ class GlobalExceptionHandler {
         ResponseEntity
             .status(HttpStatus.NOT_FOUND)
             .body(GlobalResponse.error("NO_RESOURCE", e.message ?: ""))
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
+    fun handleMethodNotAllowedException(e: HttpRequestMethodNotSupportedException): ResponseEntity<ErrorResponse> =
+        ResponseEntity
+            .status(HttpStatus.METHOD_NOT_ALLOWED)
+            .body(GlobalResponse.error("METHOD_NOT_ALLOWED", e.message ?: ""))
 }

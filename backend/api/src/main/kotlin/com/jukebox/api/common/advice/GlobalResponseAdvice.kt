@@ -1,5 +1,6 @@
 package com.jukebox.api.common.advice
 
+import com.jukebox.core.dto.GlobalResponse
 import org.springframework.core.MethodParameter
 import org.springframework.http.MediaType
 import org.springframework.http.converter.HttpMessageConverter

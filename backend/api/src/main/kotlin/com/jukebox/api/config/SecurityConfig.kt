@@ -8,8 +8,8 @@ import com.jukebox.api.auth.oauth2.OAuth2RequestRepository
 import com.jukebox.api.auth.oauth2.OAuth2SuccessHandler
 import com.jukebox.api.auth.oauth2.OAuth2UserService
 import com.jukebox.api.auth.oauth2.RedisOAuth2AuthorizedClientService
-import com.jukebox.api.common.advice.GlobalResponse
 import com.jukebox.core.dto.BusinessExceptionDto
+import com.jukebox.core.dto.GlobalResponse
 import com.jukebox.core.properties.EndpointProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

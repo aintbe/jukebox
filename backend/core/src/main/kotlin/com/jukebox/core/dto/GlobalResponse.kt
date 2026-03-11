@@ -1,4 +1,4 @@
-package com.jukebox.api.common.advice
+package com.jukebox.core.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 
