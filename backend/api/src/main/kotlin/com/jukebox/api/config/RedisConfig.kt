@@ -1,7 +1,6 @@
 package com.jukebox.api.config
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.jukebox.api.common.cache.Cache
 import org.springframework.cache.CacheManager
 import org.springframework.cache.annotation.EnableCaching
 import org.springframework.context.annotation.Bean
@@ -25,22 +24,32 @@ import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 class RedisConfig(
     private val redisConnectionFactory: RedisConnectionFactory,
 ) {
+    /**
+     * Provides a RedisTemplate bean for manual, programmatic cache operations.
+     * Use this with [com.jukebox.api.common.cache.CacheService] to systemically
+     * get/set data without worrying about type conversions.
+     */
     @Bean
-    fun redisTemplate(): RedisTemplate<String?, Any?> =
-        RedisTemplate<String?, Any?>().apply {
+    fun redisTemplate(): RedisTemplate<String, Any> {
+        val jsonSerializer = JacksonJsonRedisSerializer(Any::class.java)
+
+        return RedisTemplate<String, Any>().apply {
             connectionFactory = redisConnectionFactory
-            defaultSerializer = StringRedisSerializer()
-            afterPropertiesSet()
+            keySerializer = StringRedisSerializer()
+            valueSerializer = jsonSerializer
+            hashKeySerializer = StringRedisSerializer()
+            hashValueSerializer = jsonSerializer
         }
+    }
 
     /**
-     * A template dedicated to OAuth2 client management.
-     * This will help us restore an [OAuth2AuthorizedClient] instance
-     * easily from the cached json object.
+     * A template dedicated to OAuth2 client management. Do not merge this
+     * with [redisTemplate], since [redisTemplate] does not understand [OAuth2AuthorizedClient]
+     * or any subtypes and thus cannot deserialize it.
      */
     @Bean
     fun oAuth2RedisTemplate(): RedisTemplate<String, OAuth2AuthorizedClient> {
-        // Register class definitions so that Jackson understand how to unserialize stored data.
+        // Register class definitions so that Jackson understand how to deserialize stored data.
         val classMapper =
             JsonMapper
                 .builder()
@@ -58,6 +67,11 @@ class RedisConfig(
         }
     }
 
+    /**
+     * Provides a CacheManager bean that powers Spring's annotation-driven caching
+     * abstraction (@Cacheable, @CacheEvict, @CachePut, etc.). All cache operations
+     * declared via annotations will be routed through this manager.
+     */
     @Bean
     fun cacheManager(): CacheManager {
         // Store class information only if it matches following criteria.
@@ -78,7 +92,7 @@ class RedisConfig(
                     JsonTypeInfo.As.PROPERTY,
                 ).build()
 
-        // Serialize cache data in `String:json` format.
+        // Serialize cache data in `String:Json` format.
         val defaultConfig =
             RedisCacheConfiguration
                 .defaultCacheConfig()
@@ -90,14 +104,9 @@ class RedisConfig(
                     ),
                 )
 
-        // Create different caches for each cache key prefix to apply different ttl.
-        val configs =
-            Cache.entries.associate { it.prefix to defaultConfig.entryTtl(it.ttl) }
-
         return RedisCacheManager
             .builder(redisConnectionFactory)
             .cacheDefaults(defaultConfig)
-            .withInitialCacheConfigurations(configs)
             .build()
     }
 }
