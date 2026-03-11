@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { subscribeWithSelector } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 import { STORAGE_KEY } from "../constants"
 
@@ -81,7 +82,7 @@ export interface PlayerDevice {
   isMuted: boolean
 }
 
-interface PlayerStore extends PlayerStoreInit {
+interface PlayerStore {
   status: PlayerStatus
   setStatus: (status: PlayerStatus) => void
   /**
@@ -95,47 +96,29 @@ interface PlayerStore extends PlayerStoreInit {
   playback: Playback | undefined
   setPlayback: (playback?: Playback) => void
   device: PlayerDevice
-  initialize: (actions: PlayerStoreInit) => void
-}
-
-export interface PlayerStoreInit {
-  togglePlay: () => Promise<void>
-  playNext: () => Promise<void>
-  playPrevious: () => Promise<void>
-  playAt: (position: number) => Promise<void>
-  setVolume: (volume: number) => Promise<void>
-  toggleMute: () => Promise<void>
 }
 
 export const usePlayerStore = create<PlayerStore>()(
-  immer(set => ({
-    status: PlayerStatus.OFFLINE,
-    setStatus: (status: PlayerStatus) => set({ status }),
-    isConnecting:
-      typeof window !== "undefined"
-        ? sessionStorage.getItem(STORAGE_KEY.CONNECT_REQUESTED) === "true"
-        : false,
-    connect: () => {
-      set({ isConnecting: true })
-      sessionStorage.setItem(STORAGE_KEY.CONNECT_REQUESTED, "true")
-      window.dispatchEvent(new Event(STORAGE_KEY.CONNECT_REQUESTED))
-    },
-    jukeboxId: undefined,
-    setJukeboxId: (jukeboxId?: number) => set({ jukeboxId }),
-    playback: undefined,
-    setPlayback: (playback?: Playback) => set({ playback }),
-    device: {
-      volume: 0.5,
-      isMuted: false,
-    },
-    initialize: (actions: PlayerStoreInit) => set(actions),
-
-    // Initialized by scripts calling `initialize`.
-    togglePlay: async () => undefined,
-    playNext: async () => undefined,
-    playPrevious: async () => undefined,
-    playAt: async () => undefined,
-    setVolume: async () => undefined,
-    toggleMute: async () => undefined,
-  })),
+  immer(
+    subscribeWithSelector(set => ({
+      status: PlayerStatus.OFFLINE,
+      setStatus: (status: PlayerStatus) => set({ status }),
+      isConnecting:
+        typeof window !== "undefined"
+          ? sessionStorage.getItem(STORAGE_KEY.CONNECT_REQUESTED) === "true"
+          : false,
+      connect: () => {
+        set({ isConnecting: true })
+        sessionStorage.setItem(STORAGE_KEY.CONNECT_REQUESTED, "true")
+      },
+      jukeboxId: undefined,
+      setJukeboxId: jukeboxId => set({ jukeboxId }),
+      playback: undefined,
+      setPlayback: playback => set({ playback }),
+      device: {
+        volume: 0.5,
+        isMuted: false,
+      },
+    })),
+  ),
 )
