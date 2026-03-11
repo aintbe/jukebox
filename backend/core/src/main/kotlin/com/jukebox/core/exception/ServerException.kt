@@ -10,12 +10,12 @@ class InternalException :
     )
 
 class ExternalException(
-    serviceLabel: String,
+    serverLabel: String,
     reason: String? = null,
 ) : BusinessException(
         statusCode = HttpStatus.INTERNAL_SERVER_ERROR,
-        errorCode = "${serviceLabel.uppercase()}_SERVER_ERROR",
+        errorCode = "${serverLabel.uppercase()}_SERVER_ERROR",
         reason =
             reason
-                ?: "$serviceLabel encountered an unexpected error. Please try again later.",
+                ?: "$serverLabel encountered an unexpected error. Please try again later.",
     )
