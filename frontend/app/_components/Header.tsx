@@ -1,22 +1,15 @@
 "use client"
 
-import { useCallback } from "react"
 import { isHTTPError } from "ky"
-import { User } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Link2, Theater, User } from "lucide-react"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { signOut } from "@/lib/auth/actions"
+import { STORAGE_KEY, STREAMING_SERVICE_METADATA } from "@/lib/constants"
 import { useSession } from "@/lib/providers"
-import { useAuthViewStore } from "@/lib/stores/auth-view"
-import { DspSignIn } from "@/components/DspSignIn"
+import { useJukeboxStore } from "@/lib/stores/jukebox"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,12 +20,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function Header() {
-  const { currentView, openDspSignIn, handleDialog } = useAuthViewStore()
-
   const { session, clear } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
 
-  const handleSignOut = useCallback(async () => {
+  const handleSignOut = async () => {
     try {
       await signOut()
       await clear()
@@ -45,12 +37,38 @@ export function Header() {
         toast.error("Failed to sign out. Try again later.")
       }
     }
-  }, [router, clear])
+  }
+
+  const handleSignIn = () => {
+    sessionStorage.setItem(STORAGE_KEY.REDIRECT_PATH, pathname)
+    router.push("/sign-in")
+  }
+
+  const serviceName = useJukeboxStore(state => state.serviceName)
+  const service = serviceName
+    ? STREAMING_SERVICE_METADATA[serviceName]
+    : undefined
+  console.log("todo: header rerender")
 
   return (
-    <header className="flex h-12 flex-col justify-center p-4">
-      <div className="flex items-center justify-between">
-        <div>{/* TODO: add logo */}</div>
+    <header className="flex h-12 items-center justify-between p-4">
+      <div className="flex h-7 items-center gap-2">
+        <Theater className="h-full" /> {/* TODO: Change icon to service icon */}
+        {service && (
+          <>
+            <Link2 className="h-full" />
+            <Link
+              href={service.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-full hover:opacity-80"
+            >
+              <service.icon className="h-full" color={service.primaryColor} />
+            </Link>
+          </>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
         {session?.username ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -68,23 +86,12 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="flex items-center gap-2">
-            <Dialog open={currentView !== null} onOpenChange={handleDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline">Sign Up</Button>
-              </DialogTrigger>
-              <DialogTrigger asChild>
-                <Button onClick={openDspSignIn}>Sign In</Button>
-              </DialogTrigger>
-              <div className="flex items-center gap-2">
-                <DialogContent className="sm:max-w-md">
-                  <DialogTitle>{/* TODO: add titles */}</DialogTitle>
-                  <DialogDescription></DialogDescription>
-                  <DspSignIn />
-                </DialogContent>
-              </div>
-            </Dialog>
-          </div>
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/sign-up">Sign Up</Link>
+            </Button>
+            <Button onClick={handleSignIn}>Sign In</Button>
+          </>
         )}
       </div>
     </header>

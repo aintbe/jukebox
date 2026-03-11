@@ -1,9 +1,11 @@
 import { Suspense } from "react"
 import type { Metadata } from "next"
+import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import { Geist } from "next/font/google"
 import { Toaster } from "sonner"
 import { getServerSession } from "@/lib/auth/server"
 import { Providers } from "@/lib/providers/Providers"
+import { cn } from "@/lib/utils"
 import { Header } from "./_components/Header"
 import { Player } from "./_components/player/Player"
 import "./globals.css"
@@ -22,21 +24,27 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
+  "auth-dialog": authDialog,
 }: Readonly<{
   children: React.ReactNode
+  "auth-dialog": React.ReactNode
 }>) {
   const session = await getServerSession()
 
   return (
-    <html lang="en" className={sans.variable}>
+    <html lang="en" className={cn("dark", sans.variable)}>
       <body>
         <Toaster richColors theme="system" position="top-center" />
         <Providers session={session}>
           <Header />
           <main>{children}</main>
-          <Suspense fallback={null}>
-            <Player />
-          </Suspense>
+          {/* // TODO: 에러 발생 시 retry?? 어케 하지 */}
+          <ErrorBoundary errorComponent={undefined}>
+            <Suspense fallback={null}>
+              <Player />
+            </Suspense>
+          </ErrorBoundary>
+          {authDialog}
         </Providers>
       </body>
     </html>
