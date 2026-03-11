@@ -1,11 +1,3 @@
-/**
- * Enum representing supported Digital Service Providers (DSPs).
- * @enum {string}
- */
-export enum StreamingService {
-  SPOTIFY = "spotify",
-}
-
 export interface ExposedSession {
   userId: number
   username: string
@@ -25,3 +17,11 @@ export interface Session extends ExposedSession {
   accessExpiresAt: number
 }
 export type SessionPromise = Promise<Session | undefined>
+
+/**
+ * Enum representing supported Digital Service Providers (DSPs).
+ * @enum {string}
+ */
+export enum StreamingService {
+  SPOTIFY = "spotify",
+}

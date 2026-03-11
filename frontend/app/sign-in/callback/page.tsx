@@ -10,18 +10,6 @@ import { useSession } from "@/lib/providers"
 export const DEFAULT_REDIRECT_PATH = "/"
 
 export default function SignInCallbackPage() {
-  useSignIn()
-  return (
-    <div>
-      {/* // TODO: show intermediate image */}
-      <div className="flex h-screen items-center justify-center">
-        <p>로그인 처리 중...</p>
-      </div>
-    </div>
-  )
-}
-
-const useSignIn = () => {
   const searchParams = useSearchParams()
 
   const { session, refresh } = useSession()
@@ -60,4 +48,13 @@ const useSignIn = () => {
     }
     redirect()
   }, [router, session, refresh, searchParams])
+
+  return (
+    <div>
+      {/* // TODO: show intermediate image */}
+      <div className="flex h-screen items-center justify-center">
+        <p>로그인 처리 중...</p>
+      </div>
+    </div>
+  )
 }

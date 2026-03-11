@@ -28,3 +28,13 @@ export interface StreamingAccess {
   token: string
   expiresAt: string | null // Never expires if null
 }
+
+export interface Jukebox {
+  id: string
+  handle: string
+  serviceName: StreamingService
+}
+
+export interface Ticket {
+  ticket: string
+}
